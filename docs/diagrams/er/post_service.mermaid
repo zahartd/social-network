@@ -1,4 +1,7 @@
 erDiagram
+    USER {
+        uuid post_id
+    }
     POSTS {
         uuid post_id "Уникальный идентификатор поста"
         uuid user_id "Идентификатор автора поста"
@@ -30,6 +33,10 @@ erDiagram
         datetime created_at "Дата выставления лайка"
     }
 
-    POSTS ||--o{ COMMENTS : "содержит"
+    USER ||--|| POSTS : "CREATE, UPDATE, DELETE"
+    USER ||--|| COMMENTS : "CREATE, UPDATE, DELETE"
+    USER ||--|| FAVORITES_POSTS : "LIKE/UNLIKE"
+    USER ||--|| FAVORITES_COMMENTS : "LIKE/UNLIKE"
+    POSTS ||--o{ COMMENTS : "хранит"
     POSTS ||--o{ FAVORITES_POSTS : "получает"
     COMMENTS ||--o{ FAVORITES_COMMENTS : "получает"

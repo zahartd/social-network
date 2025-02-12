@@ -1,0 +1,35 @@
+erDiagram
+    POSTS {
+        uuid post_id "Уникальный идентификатор поста"
+        uuid user_id "Идентификатор автора поста"
+        string content "Содержимое поста"
+        datetime created_at "Дата создания поста"
+        datetime updated_at "Дата последнего обновления"
+        int favorites_count "Количество лайков на посте"
+    }
+    COMMENTS {
+        uuid comment_id "Уникальный идентификатор комментария"
+        uuid post_id "Идентификатор поста"
+        uuid user_id "Идентификатор автора комментария"
+        uuid parent_comment_id "Идентификатор родительского комментария (если есть)"
+        string content "Содержимое комментария"
+        datetime created_at "Дата создания комментария"
+        datetime updated_at "Дата обновления комментария"
+        int favorites_count "Количество лайков на комментарии"
+    }
+    FAVORITES_POSTS {
+        uuid reaction_id "Уникальный идентификатор реакции"
+        uuid post_id "Уникальный идентификатор поста"
+        uuid user_id "Идентификатор пользователя поставившего лайк"
+        datetime created_at "Дата выставления лайка"
+    }
+    FAVORITES_COMMENTS {
+        uuid reaction_id "Уникальный идентификатор реакции"
+        uuid comment_id "Уникальный идентификатор коммментария"
+        uuid user_id "Идентификатор пользователя поставившего лайк"
+        datetime created_at "Дата выставления лайка"
+    }
+
+    POSTS ||--o{ COMMENTS : "содержит"
+    POSTS ||--o{ FAVORITES_POSTS : "получает"
+    COMMENTS ||--o{ FAVORITES_COMMENTS : "получает"

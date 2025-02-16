@@ -1,42 +1,48 @@
 erDiagram
-    USER {
-        uuid post_id
-    }
-    POSTS {
-        uuid post_id "Уникальный идентификатор поста"
-        uuid user_id "Идентификатор автора поста"
-        string content "Содержимое поста"
-        datetime created_at "Дата создания поста"
-        datetime updated_at "Дата последнего обновления"
-        int favorites_count "Количество лайков на посте"
-    }
-    COMMENTS {
-        uuid comment_id "Уникальный идентификатор комментария"
-        uuid post_id "Идентификатор поста"
-        uuid user_id "Идентификатор автора комментария"
-        uuid parent_comment_id "Идентификатор родительского комментария (если есть)"
-        string content "Содержимое комментария"
-        datetime created_at "Дата создания комментария"
-        datetime updated_at "Дата обновления комментария"
-        int favorites_count "Количество лайков на комментарии"
-    }
-    FAVORITES_POSTS {
-        uuid reaction_id "Уникальный идентификатор реакции"
-        uuid post_id "Уникальный идентификатор поста"
-        uuid user_id "Идентификатор пользователя поставившего лайк"
-        datetime created_at "Дата выставления лайка"
-    }
-    FAVORITES_COMMENTS {
-        uuid reaction_id "Уникальный идентификатор реакции"
-        uuid comment_id "Уникальный идентификатор коммментария"
-        uuid user_id "Идентификатор пользователя поставившего лайк"
-        datetime created_at "Дата выставления лайка"
+    USER_PROFILE {
+        uuid user_id "Уникальный идентификатор пользователя"
+        text username "Логин пользователя"
+        text email "Электронная почта пользователя"
+        text image "URL аватарки пользователя"
+        datetime created_at "Дата регистрации"
     }
 
-    USER ||--|| POSTS : "CREATE, UPDATE, DELETE"
-    USER ||--|| COMMENTS : "CREATE, UPDATE, DELETE"
-    USER ||--|| FAVORITES_POSTS : "LIKE/UNLIKE"
-    USER ||--|| FAVORITES_COMMENTS : "LIKE/UNLIKE"
-    POSTS ||--o{ COMMENTS : "хранит"
-    POSTS ||--o{ FAVORITES_POSTS : "получает"
-    COMMENTS ||--o{ FAVORITES_COMMENTS : "получает"
+    POSTS_BY_USER {
+        uuid user_id "Автор поста"
+        timeuuid post_id "Идентификатор поста"
+        text content "Зашифрованное содержимое"
+        text image_url "URL изображения"
+        datetime created_at "Время публикации"
+    }
+
+    COMMENTS_BY_POST {
+        uuid post_id PK "Идентификатор поста"
+        timeuuid comment_id "Идентификатор комментария"
+        uuid author_id "Автор комментария"
+        text author_image "Аватар автора"
+        text content "Текст комментария"
+        datetime created_at "Время комментария"
+    }
+
+    USER_INTERACTIONS {
+        uuid user_id PK "Идентификатор пользователя"
+        timeuuid action_time "Время действия"
+        varchar action_type "{ LIKE_POST, UNLIKE }"
+        uuid target_id "Цель действия"
+        varchar device_type "{ iOS, Android }"
+        varchar region "{ eu, us }"
+    }
+
+    REACTION_METRICS {
+        uuid target_id PK "Идентификатор объекта"
+        varchar target_type "{ post, comment }"
+        counter likes_count "Счетчик лайков"
+        counter dislikes_count "Счетчик дизлайков"
+        datetime updated_at "Время последнего обновления"
+    }
+
+    USER_PROFILE ||--o{ POSTS_BY_USER : "публикует"
+    USER_PROFILE ||--o{ COMMENTS_BY_POST : "комментирует через author_id"
+    USER_PROFILE ||--o{ USER_INTERACTIONS : "совершает действия"
+    POSTS_BY_USER ||--o{ COMMENTS_BY_POST : "содержит комментарии через post_id"
+    POSTS_BY_USER ||--o{ REACTION_METRICS : "получает реакции через target_id"

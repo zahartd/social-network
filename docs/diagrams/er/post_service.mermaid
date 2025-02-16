@@ -10,13 +10,13 @@ erDiagram
     POSTS_BY_USER {
         uuid user_id "Автор поста"
         timeuuid post_id "Идентификатор поста"
-        text content "Зашифрованное содержимое"
+        text "Cодержимое поста"
         text image_url "URL изображения"
         datetime created_at "Время публикации"
     }
 
     COMMENTS_BY_POST {
-        uuid post_id PK "Идентификатор поста"
+        uuid post_id "Идентификатор поста"
         timeuuid comment_id "Идентификатор комментария"
         uuid author_id "Автор комментария"
         text author_image "Аватар автора"
@@ -25,19 +25,18 @@ erDiagram
     }
 
     USER_INTERACTIONS {
-        uuid user_id PK "Идентификатор пользователя"
+        uuid user_id "Идентификатор пользователя"
         timeuuid action_time "Время действия"
-        varchar action_type "{ LIKE_POST, UNLIKE }"
+        varchar action_type "{ LIKE, UNLIKE }"
         uuid target_id "Цель действия"
-        varchar device_type "{ iOS, Android }"
-        varchar region "{ eu, us }"
+        varchar device_type "{ iOS, Android, Desktop }"
+        varchar region "{ eu, as, us }"
     }
 
     REACTION_METRICS {
-        uuid target_id PK "Идентификатор объекта"
+        uuid target_id "Идентификатор объекта"
         varchar target_type "{ post, comment }"
         counter likes_count "Счетчик лайков"
-        counter dislikes_count "Счетчик дизлайков"
         datetime updated_at "Время последнего обновления"
     }
 

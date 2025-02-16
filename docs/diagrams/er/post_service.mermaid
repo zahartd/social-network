@@ -45,3 +45,4 @@ erDiagram
     USER_PROFILE ||--o{ USER_INTERACTIONS : "совершает действия"
     POSTS_BY_USER ||--o{ COMMENTS_BY_POST : "содержит комментарии через post_id"
     POSTS_BY_USER ||--o{ REACTION_METRICS : "получает реакции через target_id"
+    COMMENTS_BY_POST ||--o{ REACTION_METRICS : "получает реакции через target_id"

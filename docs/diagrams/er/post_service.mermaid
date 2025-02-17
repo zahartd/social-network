@@ -3,7 +3,7 @@ erDiagram
         uuid user_id "Уникальный идентификатор пользователя"
         text username "Логин пользователя"
         text email "Электронная почта пользователя"
-        text image "URL аватарки пользователя"
+        text image_url "URL аватарки пользователя"
         datetime created_at "Дата регистрации"
     }
 
@@ -19,7 +19,7 @@ erDiagram
         uuid post_id "Идентификатор поста"
         timeuuid comment_id "Идентификатор комментария"
         uuid author_id "Автор комментария"
-        text author_image "Аватар автора"
+        text author_image_url "Аватар автора"
         text content "Текст комментария"
         datetime created_at "Время комментария"
     }
@@ -30,7 +30,6 @@ erDiagram
         varchar action_type "{ LIKE, UNLIKE }"
         uuid target_id "Цель действия"
         varchar device_type "{ iOS, Android, Desktop }"
-        varchar region "{ eu, as, us }"
     }
 
     REACTION_METRICS {

@@ -49,7 +49,7 @@ model {
 
         statsService = container "Stats Service" {
             description "Сбор и анализ статистики (лайки, просмотры, комментарии)"
-            technology "C++, ClickHouse"
+            technology "C++, PostgreSQL"
             icon tech:cplusplus
         }
 
@@ -66,9 +66,9 @@ model {
         }
 
         postDb = containerDb "Database" {
-            description "Хранение постов и комментариев"
-            technology "Cassandra"
-            icon tech:cassandra
+            description "Хранение постов, комментариев и реакции"
+            technology "PostgreSQL"
+            icon tech:postgresql
         }
 
         statsDb = containerDb "Database" {

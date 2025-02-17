@@ -1,47 +1,37 @@
 erDiagram
-    USER_PROFILE {
-        uuid user_id "Уникальный идентификатор пользователя"
-        text username "Логин пользователя"
-        text email "Электронная почта пользователя"
-        text image_url "URL аватарки пользователя"
-        datetime created_at "Дата регистрации"
+    USER {
+        uuid post_id
     }
-
-    POSTS_BY_USER {
-        uuid user_id "Автор поста"
-        timeuuid post_id "Идентификатор поста"
-        text content "Cодержимое поста"
-        text image_url "URL изображения"
-        datetime created_at "Время публикации"
+    POSTS {
+        uuid post_id "Уникальный идентификатор поста"
+        uuid user_id "Идентификатор автора поста"
+        string content "Содержимое поста"
+        datetime created_at "Дата создания поста"
+        datetime updated_at "Дата последнего обновления"
+        int favorites_count "Количество лайков на посте"
     }
-
-    COMMENTS_BY_POST {
+    COMMENTS {
+        uuid comment_id "Уникальный идентификатор комментария"
         uuid post_id "Идентификатор поста"
-        timeuuid comment_id "Идентификатор комментария"
-        uuid author_id "Автор комментария"
-        text author_image_url "Аватар автора"
-        text content "Текст комментария"
-        datetime created_at "Время комментария"
+        uuid user_id "Идентификатор автора комментария"
+        uuid parent_comment_id "Идентификатор родительского комментария (если есть)"
+        string content "Содержимое комментария"
+        datetime created_at "Дата создания комментария"
+        datetime updated_at "Дата обновления комментария"
+        int favorites_count "Количество лайков на комментарии"
+    }
+    REACTIONS {
+        uuid reaction_id "Уникальный идентификатор реакции"
+        uuid user_id "Идентификатор пользователя потависшего реакцию"
+        string target_type "Тип объекта на который поставили лайк"
+        uuid target_id "Уникальный идентификатор поста/комментария"
+        uuid user_id "Идентификатор пользователя поставившего реакцию"
+        datetime created_at "Дата выставления реакции"
     }
 
-    USER_INTERACTIONS {
-        uuid user_id "Идентификатор пользователя"
-        timeuuid action_time "Время действия"
-        varchar action_type "{ LIKE, UNLIKE }"
-        uuid target_id "Цель действия"
-        varchar device_type "{ iOS, Android, Desktop }"
-    }
-
-    REACTION_METRICS {
-        uuid target_id "Идентификатор объекта"
-        varchar target_type "{ post, comment }"
-        counter likes_count "Счетчик лайков"
-        datetime updated_at "Время последнего обновления"
-    }
-
-    USER_PROFILE ||--o{ POSTS_BY_USER : "публикует"
-    USER_PROFILE ||--o{ COMMENTS_BY_POST : "комментирует через author_id"
-    USER_PROFILE ||--o{ USER_INTERACTIONS : "совершает действия"
-    POSTS_BY_USER ||--o{ COMMENTS_BY_POST : "содержит комментарии через post_id"
-    POSTS_BY_USER ||--o{ REACTION_METRICS : "получает реакции через target_id"
-    COMMENTS_BY_POST ||--o{ REACTION_METRICS : "получает реакции через target_id"
+    POSTS ||--o{ COMMENTS : "содержит"
+    USER ||--|| POSTS : "CREATE, UPDATE, DELETE"
+    USER ||--|| COMMENTS : "CREATE, UPDATE, DELETE"
+    USER ||--|| REACTIONS : "LIKE/UNLIKE"
+    POSTS ||--o{ REACTIONS : "получает"
+    COMMENTS ||--o{ REACTIONS : "получает"

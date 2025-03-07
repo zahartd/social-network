@@ -1,0 +1,47 @@
+erDiagram
+    USER_PROFILE {
+        uuid user_id "Уникальный идентификатор пользователя"
+        text username "Логин пользователя"
+        text email "Электронная почта пользователя"
+        text image_url "URL аватарки пользователя"
+        datetime created_at "Дата регистрации"
+    }
+
+    POSTS_BY_USER {
+        uuid user_id "Автор поста"
+        timeuuid post_id "Идентификатор поста"
+        text content "Cодержимое поста"
+        text image_url "URL изображения"
+        datetime created_at "Время публикации"
+    }
+
+    COMMENTS_BY_POST {
+        uuid post_id "Идентификатор поста"
+        timeuuid comment_id "Идентификатор комментария"
+        uuid author_id "Автор комментария"
+        text author_image_url "Аватар автора"
+        text content "Текст комментария"
+        datetime created_at "Время комментария"
+    }
+
+    USER_INTERACTIONS {
+        uuid user_id "Идентификатор пользователя"
+        timeuuid action_time "Время действия"
+        varchar action_type "{ LIKE, UNLIKE }"
+        uuid target_id "Цель действия"
+        varchar device_type "{ iOS, Android, Desktop }"
+    }
+
+    REACTION_METRICS {
+        uuid target_id "Идентификатор объекта"
+        varchar target_type "{ post, comment }"
+        counter likes_count "Счетчик лайков"
+        datetime updated_at "Время последнего обновления"
+    }
+
+    USER_PROFILE ||--o{ POSTS_BY_USER : "публикует"
+    USER_PROFILE ||--o{ COMMENTS_BY_POST : "комментирует через author_id"
+    USER_PROFILE ||--o{ USER_INTERACTIONS : "совершает действия"
+    POSTS_BY_USER ||--o{ COMMENTS_BY_POST : "содержит комментарии через post_id"
+    POSTS_BY_USER ||--o{ REACTION_METRICS : "получает реакции через target_id"
+    COMMENTS_BY_POST ||--o{ REACTION_METRICS : "получает реакции через target_id"

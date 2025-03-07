@@ -1,0 +1,30 @@
+erDiagram
+    USERS {
+        uuid id "Уникальный идентификатор"
+        string username "Имя пользователя"
+        string email "Email пользователя"
+        string bio "Небольшая биография пользователя в профиле"
+        string image "url/id/base64 аватарки пользователя"
+        string password_hash "Хэш пароля"
+        string salt "Соль для хеширования пароля"
+        datetime created_at "Дата регистрации"
+        datetime updated_at "Дата последнего обновления"
+    }
+    USER_ROLES {
+        uuid id "Уникальный идентификатор роли"
+        uuid user_id "Идентификатор пользователя"
+        string role "Роль пользователя (например, admin, moderator, approved_user, user)"
+        uuid assign_user_id "Идентификатор пользователя назначившего роль"
+        datetime assigned_at "Дата назначения роли"
+    }
+    USER_SESSIONS {
+        uuid id "Уникальный идентификатор сессии"
+        uuid user_id "Идентификатор пользователя"
+        string token "Токен доступа"
+        datetime created_at "Время начала сессии"
+        datetime expires_at "Время окончания сессии"
+        string ip_address "IP-адрес клиента"
+    }
+
+    USERS ||--o{ USER_ROLES : "имеет"
+    USERS ||--o{ USER_SESSIONS : "создаёт"

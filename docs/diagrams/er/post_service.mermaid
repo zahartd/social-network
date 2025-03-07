@@ -1,0 +1,36 @@
+erDiagram
+    USER {
+        uuid user_id
+    }
+    POSTS {
+        uuid post_id "Уникальный идентификатор поста"
+        uuid user_id "Идентификатор автора поста"
+        string content "Содержимое поста"
+        datetime created_at "Дата создания поста"
+        datetime updated_at "Дата последнего обновления"
+        int favorites_count "Количество лайков на посте"
+    }
+    COMMENTS {
+        uuid comment_id "Уникальный идентификатор комментария"
+        uuid post_id "Идентификатор поста"
+        uuid user_id "Идентификатор автора комментария"
+        uuid parent_comment_id "Идентификатор родительского комментария (если есть)"
+        string content "Содержимое комментария"
+        datetime created_at "Дата создания комментария"
+        datetime updated_at "Дата обновления комментария"
+        int favorites_count "Количество лайков на комментарии"
+    }
+    REACTIONS {
+        uuid reaction_id "Уникальный идентификатор реакции"
+        string target_type "Тип объекта на который поставили лайк"
+        uuid target_id "Уникальный идентификатор поста/комментария"
+        uuid user_id "Идентификатор пользователя поставившего реакцию"
+        datetime created_at "Дата выставления реакции"
+    }
+
+    POSTS ||--o{ COMMENTS : "содержит"
+    USER ||--|| POSTS : "CREATE, UPDATE, DELETE"
+    USER ||--|| COMMENTS : "CREATE, UPDATE, DELETE"
+    USER ||--|| REACTIONS : "LIKE/UNLIKE"
+    POSTS ||--o{ REACTIONS : "получает"
+    COMMENTS ||--o{ REACTIONS : "получает"

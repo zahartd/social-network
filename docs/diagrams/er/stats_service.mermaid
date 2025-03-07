@@ -1,0 +1,34 @@
+erDiagram
+    POST_STATS {
+        uuid post_id "Идентификатор поста"
+        int likes_count "Количество лайков"
+        int views_count "Количество просмотров"
+        int comments_count "Количество комментариев"
+        datetime updated_at "Дата последнего обновления статистики"
+    }
+    COMMENT_STATS {
+        uuid comment_id "Идентификатор комментария"
+        int likes_count "Количество лайков"
+        int reply_count "Количество комментариев"
+        datetime updated_at "Дата последнего обновления статистики"
+    }
+    USER_STATS {
+        uuid user_id "Идентификатор пользователя"
+        int total_posts "Общее количество постов"
+        int total_likes "Общее количество лайков (на посты и комментарии)"
+        int total_views "Общее количество просмотров"
+        int total_comments "Общее количество комментариев"
+        datetime updated_at "Дата последнего обновления статистики"
+    }
+    EVENT_LOG {
+        uuid event_id "Уникальный идентификатор события"
+        string event_type "Тип события (like, view, comment и т.д.)"
+        uuid user_id "Идентификатор пользователя, инициировавшего событие"
+        uuid target_id "Идентификатор объекта события (поста или комментария)"
+        datetime timestamp "Время возникновения события"
+        json details "Дополнительные данные события"
+    }
+
+    POST_STATS ||--o{ EVENT_LOG : "агрегирует события для поста"
+    COMMENT_STATS ||--o{ EVENT_LOG : "агрегирует события для комментариев"
+    USER_STATS ||--o{ EVENT_LOG : "агрегирует события пользователя"

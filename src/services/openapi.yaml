@@ -1,0 +1,246 @@
+openapi: "3.1.0"
+info:
+  title: "Social Network API Gateway"
+  version: "1.0.0"
+servers:
+  - url: "http://localhost:8080"
+paths:
+  /user:
+    post:
+      tags:
+        - user
+      summary: "Register User"
+      description: "Creates a new user account with login, firstname, surname, email, and password."
+      operationId: "createUser"
+      requestBody:
+        description: "User object for registration"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegistration"
+      responses:
+        "201":
+          description: "User created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileFull"
+        default:
+          description: "Unexpected error"
+  /user/login:
+    get:
+      tags:
+        - user
+      summary: "User Login"
+      description: "Authenticates a user with login and password. Returns a JWT token."
+      operationId: "loginUser"
+      parameters:
+        - name: "login"
+          in: "query"
+          description: "User login"
+          required: true
+          schema:
+            type: "string"
+        - name: "password"
+          in: "query"
+          description: "User password"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Successful login"
+          headers:
+            X-Rate-Limit:
+              description: "Calls per hour allowed for the user"
+              schema:
+                type: "integer"
+                format: "int32"
+            X-Expires-After:
+              description: "UTC date when token expires"
+              schema:
+                type: "string"
+                format: "date-time"
+          content:
+            application/json:
+              schema:
+                type: "string"
+                description: "JWT token"
+        "400":
+          description: "Invalid login/password supplied"
+  /user/logout:
+    get:
+      tags:
+        - user
+      summary: "User Logout"
+      description: "Logs out the current user by deleting the corresponding session."
+      operationId: "logoutUser"
+      responses:
+        default:
+          description: "Successful operation"
+  /user/{identifier}:
+    get:
+      tags:
+        - user
+      summary: "Get User Profile"
+      description: >
+        Retrieves the user profile. If the JWT token belongs to the requested user,
+        full profile (excluding password) is returned. Otherwise, only a summary
+        (login, email, firstname, surname, bio) is returned.
+      operationId: "getUserProfile"
+      parameters:
+        - name: "identifier"
+          in: "path"
+          description: "The UUID or login of the user"
+          required: true
+          schema:
+            type: "string"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: "User profile retrieved successfully"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/UserProfileFull"
+                  - $ref: "#/components/schemas/UserProfileSummary"
+        "401":
+          description: "Unauthorized"
+        "404":
+          description: "User not found"
+    put:
+      tags:
+        - user
+      summary: "Update User Profile"
+      description: >
+        Updates the user's profile. Only allowed if the JWT token belongs to the user.
+        Only email, firstname, surname, phone, and bio can be updated.
+      operationId: "updateUserProfile"
+      parameters:
+        - name: "identifier"
+          in: "path"
+          description: "The UUID or login of the user to update"
+          required: true
+          schema:
+            type: "string"
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: "Updated user object"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        default:
+          description: "Successful operation"
+    delete:
+      tags:
+        - user
+      summary: "Delete User Account"
+      description: >
+        Deletes the user account. Only allowed if the JWT token belongs to the user.
+      operationId: "deleteUser"
+      parameters:
+        - name: "identifier"
+          in: "path"
+          description: "The UUID or login of the user to delete"
+          required: true
+          schema:
+            type: "string"
+      security:
+        - BearerAuth: []
+      responses:
+        "400":
+          description: "Invalid identifier supplied"
+        "404":
+          description: "User not found"
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "JWT"
+  schemas:
+    UserRegistration:
+      type: object
+      properties:
+        login:
+          type: string
+        firstname:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+      required:
+        - login
+        - firstname
+        - surname
+        - email
+        - password
+    UserUpdate:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstname:
+          type: string
+        surname:
+          type: string
+        phone:
+          type: string
+        bio:
+          type: string
+      required:
+        - email
+        - firstname
+        - surname
+    UserProfileFull:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "UUID of the user"
+        login:
+          type: string
+        firstname:
+          type: string
+        surname:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        bio:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserProfileSummary:
+      type: object
+      properties:
+        login:
+          type: string
+        email:
+          type: string
+          format: email
+        firstname:
+          type: string
+        surname:
+          type: string
+        bio:
+          type: string

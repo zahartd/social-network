@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=userdb
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  migrate:
+    image: migrate/migrate:v4.15.2
+    command: ["-path", "/migrations", "-database", "postgres://postgres:secret@postgres:5432/userdb?sslmode=disable", "up"]
+    volumes:
+      - ./user-service/migrations:/migrations
+    depends_on:
+      - postgres
+
+  user-service:
+    build:
+      context: ./user-service
+    ports:
+      - 8081:8081
+    environment:
+      - DB_DSN=postgres://postgres:secret@postgres:5432/userdb?sslmode=disable
+      - JWT_PRIVATE_KEY=/app/certs/id_rsa
+      - JWT_PUBLIC_KEY=/app/certs/id_rsa.pub
+    volumes:
+      - ./certs:/app/certs:ro
+    depends_on:
+      - postgres
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - 8080:8080
+    environment:
+      - USER_SERVICE_URL=http://user-service:8081
+      - PORT=8080
+      - JWT_PUBLIC_KEY=/app/certs/id_rsa.pub
+    volumes:
+      - ./certs/id_rsa.pub:/app/certs/id_rsa.pub:ro
+    depends_on:
+      - user-service
+
+volumes:
+  pgdata:

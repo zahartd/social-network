@@ -43,7 +43,6 @@ func (s *userService) CreateUser(login, firstname, surname, email, password stri
 		Surname:      surname,
 		Email:        email,
 		PasswordHash: string(hash),
-		Salt:         "",
 	}
 	err = s.repo.Create(user)
 	if err != nil {

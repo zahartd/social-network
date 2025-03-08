@@ -11,7 +11,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   migrate:
-    image: migrate/migrate:v4.15.2
+    image: migrate/migrate:latest
     command: ["-path", "/migrations", "-database", "postgres://postgres:secret@postgres:5432/userdb?sslmode=disable", "up"]
     volumes:
       - ./user-service/migrations:/migrations

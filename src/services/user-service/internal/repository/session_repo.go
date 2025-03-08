@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"net"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 )
@@ -36,13 +37,15 @@ func (r *postgresSessionRepo) GetSessionByToken(token string) (*models.Session, 
 	FROM user_sessions WHERE token=$1`
 	row := r.db.QueryRow(query, token)
 	session := &models.Session{}
-	err := row.Scan(&session.ID, &session.UserID, &session.Token, &session.CreatedAt, &session.ExpiresAt, &session.IPAddress)
+	var ipStr string
+	err := row.Scan(&session.ID, &session.UserID, &session.Token, &session.CreatedAt, &session.ExpiresAt, &ipStr)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("session not found")
 		}
 		return nil, err
 	}
+	session.IPAddress = net.ParseIP(ipStr)
 	return session, nil
 }
 

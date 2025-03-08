@@ -25,20 +25,21 @@ func NewPostgresUserRepo(db *sql.DB) UserRepository {
 
 func (r *postgresUserRepo) Create(user *models.User) error {
 	query := `
-	INSERT INTO users (login, firstname, surname, email, phone, bio, password_hash, salt, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
+	INSERT INTO
+	users (login, firstname, surname, email, phone, bio, password_hash, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
 	RETURNING id, created_at, updated_at`
-	return r.db.QueryRow(query, user.Login, user.Firstname, user.Surname, user.Email, user.Phone, user.Bio, user.PasswordHash, user.Salt).
+	return r.db.QueryRow(query, user.Login, user.Firstname, user.Surname, user.Email, user.Phone, user.Bio, user.PasswordHash).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
 func (r *postgresUserRepo) GetByLogin(login string) (*models.User, error) {
 	query := `
-	SELECT id, login, firstname, surname, email, phone, bio, password_hash, salt, created_at, updated_at
+	SELECT id, login, firstname, surname, email, phone, bio, password_hash, created_at, updated_at
 	FROM users WHERE login=$1`
 	row := r.db.QueryRow(query, login)
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Login, &user.Firstname, &user.Surname, &user.Email, &user.Phone, &user.Bio, &user.PasswordHash, &user.Salt, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.ID, &user.Login, &user.Firstname, &user.Surname, &user.Email, &user.Phone, &user.Bio, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("user not found")
@@ -50,11 +51,11 @@ func (r *postgresUserRepo) GetByLogin(login string) (*models.User, error) {
 
 func (r *postgresUserRepo) GetByID(id string) (*models.User, error) {
 	query := `
-	SELECT id, login, firstname, surname, email, phone, bio, password_hash, salt, created_at, updated_at
+	SELECT id, login, firstname, surname, email, phone, bio, password_hash, created_at, updated_at
 	FROM users WHERE id=$1`
 	row := r.db.QueryRow(query, id)
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Login, &user.Firstname, &user.Surname, &user.Email, &user.Phone, &user.Bio, &user.PasswordHash, &user.Salt, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.ID, &user.Login, &user.Firstname, &user.Surname, &user.Email, &user.Phone, &user.Bio, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("user not found")

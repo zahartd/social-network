@@ -14,13 +14,13 @@ services:
     image: migrate/migrate:latest
     command: ["-path", "/migrations", "-database", "postgres://postgres:secret@postgres:5432/userdb?sslmode=disable", "up"]
     volumes:
-      - ./user-service/migrations:/migrations
+      - ./services/user-service/migrations:/migrations
     depends_on:
       - postgres
 
   user-service:
     build:
-      context: ./user-service
+      context: ./services/user-service
     ports:
       - 8081:8081
     environment:
@@ -34,7 +34,7 @@ services:
 
   api-gateway:
     build:
-      context: ./api-gateway
+      context: ./services/api-gateway
     ports:
       - 8080:8080
     environment:

@@ -3,19 +3,10 @@ package utils
 import (
 	"testing"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
-type TestStruct struct {
-	Phone string `validate:"phone"`
-}
-
-func TestPhoneValidator(t *testing.T) {
-	v := validator.New()
-	if err := v.RegisterValidation("phone", PhoneValidator); err != nil {
-		t.Fatalf("Failed to register phone validator: %v", err)
-	}
-
+func TestValidatePhone(t *testing.T) {
 	tests := []struct {
 		name  string
 		phone string
@@ -31,26 +22,14 @@ func TestPhoneValidator(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ts := TestStruct{Phone: tt.phone}
-		err := v.Struct(ts)
-		if (err == nil) != tt.valid {
-			t.Errorf("%s: expected valid=%v, got error: %v", tt.name, tt.valid, err)
-		} else if !tt.valid && err == nil {
-			t.Errorf("Expected error for %q, but got valid", tt.name)
+		result := ValidatePhone(tt.phone)
+		if result != tt.valid {
+			t.Errorf("%s: expected %v, got %v", tt.name, tt.valid, result)
 		}
 	}
 }
 
-type TestPassword struct {
-	Password string `validate:"password"`
-}
-
-func TestPasswordValidator(t *testing.T) {
-	v := validator.New()
-	if err := v.RegisterValidation("password", PasswordValidator); err != nil {
-		t.Fatalf("Failed to register password validator: %v", err)
-	}
-
+func TestValidatePassword(t *testing.T) {
 	tests := []struct {
 		name     string
 		password string
@@ -64,15 +43,56 @@ func TestPasswordValidator(t *testing.T) {
 		{"Too long", "Password12345678901234567890", false},
 	}
 
+	for _, tt := range tests {
+		result := ValidatePassword(tt.password)
+		if result != tt.valid {
+			t.Errorf("%s: expected %v, got %v", tt.name, tt.valid, result)
+		}
+	}
+}
+
+func TestValidateLogin(t *testing.T) {
+	tests := []struct {
+		name  string
+		login string
+		valid bool
+	}{
+		{"Valid login simple", "a123", true},
+		{"Valid login with underscore", "john_doe", true},
+		{"Valid login numeric in middle", "user123_name", true},
+		{"Too short", "a", false},
+		{"Too long", "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", false},
+		{"Starts with digit", "1john", false},
+		{"Starts with underscore", "_john", false},
+		{"Contains uppercase", "johnDoe", false},
+		{"Contains special char", "john#doe", false},
+		{"Empty string", "", false},
+	}
+
+	for _, tt := range tests {
+		result := ValidateLogin(tt.login)
+		if result != tt.valid {
+			t.Errorf("%s: expected %v, got %v", tt.name, tt.valid, result)
+		}
+	}
+}
+
+func TestValidateUserID(t *testing.T) {
+	tests := []struct {
+		name   string
+		userID string
+		valid  bool
+	}{
+		{"Valid UUID", uuid.NewString(), true},
+		{"Invalid UUID", "not-a-uuid", false},
+		{"Empty string", "", false},
+		{"Short string", "12345", false},
+	}
+
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			data := TestPassword{Password: tc.password}
-			err := v.Struct(data)
-			if tc.valid && err != nil {
-				t.Errorf("Expected valid for %q, got error: %v", tc.password, err)
-			} else if !tc.valid && err == nil {
-				t.Errorf("Expected error for %q, but got valid", tc.password)
-			}
-		})
+		result := ValidateUserID(tc.userID)
+		if result != tc.valid {
+			t.Errorf("%s: expected %v, got %v", tc.name, tc.valid, result)
+		}
 	}
 }

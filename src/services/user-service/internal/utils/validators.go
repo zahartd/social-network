@@ -3,32 +3,33 @@ package utils
 import (
 	"regexp"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
-var phoneRegex = regexp.MustCompile(`^\+?[0-9]{7,15}$`)
-
-func PhoneValidator(fl validator.FieldLevel) bool {
-	phone, ok := fl.Field().Interface().(string)
-	if !ok {
-		return false
-	}
+func ValidatePhone(phone string) bool {
+	phoneRegex := regexp.MustCompile(`^\+?[0-9]{7,15}$`)
 	return phoneRegex.MatchString(phone)
 }
 
-func PasswordValidator(fl validator.FieldLevel) bool {
-	password, ok := fl.Field().Interface().(string)
-	if !ok {
-		return false
-	}
-
+func ValidatePassword(password string) bool {
 	if len(password) < 8 || len(password) > 24 {
 		return false
 	}
+	lowerRegex := regexp.MustCompile(`[a-z]`)
+	upperRegex := regexp.MustCompile(`[A-Z]`)
+	digitRegex := regexp.MustCompile(`[0-9]`)
+	return lowerRegex.MatchString(password) && upperRegex.MatchString(password) && digitRegex.MatchString(password)
+}
 
-	lower := regexp.MustCompile(`[a-z]`)
-	upper := regexp.MustCompile(`[A-Z]`)
-	digit := regexp.MustCompile(`[0-9]`)
+func ValidateLogin(login string) bool {
+	if len(login) < 2 || len(login) > 40 {
+		return false
+	}
+	loginRegex := regexp.MustCompile(`^[a-z][a-z0-9_]+$`)
+	return loginRegex.MatchString(login)
+}
 
-	return lower.MatchString(password) && upper.MatchString(password) && digit.MatchString(password)
+func ValidateUserID(userID string) bool {
+	_, err := uuid.Parse(userID)
+	return err == nil
 }

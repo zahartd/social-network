@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 	"github.com/zahartd/social-network/src/services/user-service/internal/service"
+	"github.com/zahartd/social-network/src/services/user-service/internal/utils"
 )
 
 type UserHandler struct {
@@ -21,7 +21,7 @@ func NewUserHandler(s service.UserService) *UserHandler {
 
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req struct {
-		Login     string `json:"login" binding:"required"`
+		Login     string `json:"login" binding:"required,login"`
 		Firstname string `json:"firstname" binding:"required"`
 		Surname   string `json:"surname" binding:"required"`
 		Email     string `json:"email" binding:"required,email"`
@@ -49,11 +49,24 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 func (h *UserHandler) Login(c *gin.Context) {
 	login := c.Query("login")
-	password := c.Query("password")
-	if login == "" || password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "login and password are required"})
+	if login == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "login is required"})
 		return
 	}
+	if !utils.ValidateLogin(login) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "login is incorrect"})
+		return
+	}
+	password := c.Query("password")
+	if password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is required"})
+		return
+	}
+	if !utils.ValidatePassword(password) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is incorrect"})
+		return
+	}
+
 	user, _, err := h.service.Login(login, password, c.ClientIP())
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -83,26 +96,29 @@ func (h *UserHandler) Logout(c *gin.Context) {
 
 func (h *UserHandler) GetUser(c *gin.Context) {
 	identifier := c.Param("identifier")
+	id, isUUID, err := utils.ParseIdentifier(identifier)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var user *models.User
-	var err error
-	if strings.Contains(identifier, "-") {
-		if _, err := uuid.Parse(identifier); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID format"})
-			return
-		}
-		user, err = h.service.GetUserByID(identifier)
+	if isUUID {
+		user, err = h.service.GetUserByID(id)
 	} else {
-		user, err = h.service.GetUserByLogin(identifier)
+		user, err = h.service.GetUserByLogin(id)
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
 	requesterID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 		return
 	}
+
 	if requesterID == user.ID {
 		c.JSON(http.StatusOK, user)
 	} else {
@@ -119,26 +135,29 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	identifier := c.Param("identifier")
+	id, isUUID, err := utils.ParseIdentifier(identifier)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var user *models.User
-	var err error
-	if strings.Contains(identifier, "-") {
-		if _, err := uuid.Parse(identifier); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID format"})
-			return
-		}
-		user, err = h.service.GetUserByID(identifier)
+	if isUUID {
+		user, err = h.service.GetUserByID(id)
 	} else {
-		user, err = h.service.GetUserByLogin(identifier)
+		user, err = h.service.GetUserByLogin(id)
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
 	requesterID, exists := c.Get("userID")
 	if !exists || requesterID != user.ID {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized to update this user"})
 		return
 	}
+
 	var req struct {
 		Email     string `json:"email" binding:"required,email"`
 		Firstname string `json:"firstname" binding:"required"`
@@ -157,30 +176,33 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, updatedUser)
 }
+
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	identifier := c.Param("identifier")
+	id, isUUID, err := utils.ParseIdentifier(identifier)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var user *models.User
-	var err error
-	if strings.Contains(identifier, "-") {
-		if _, err := uuid.Parse(identifier); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID format"})
-			return
-		}
-		user, err = h.service.GetUserByID(identifier)
+	if isUUID {
+		user, err = h.service.GetUserByID(id)
 	} else {
-		user, err = h.service.GetUserByLogin(identifier)
+		user, err = h.service.GetUserByLogin(id)
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
 	requesterID, exists := c.Get("userID")
 	if !exists || requesterID != user.ID {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized to delete this user"})
 		return
 	}
-	err = h.service.DeleteUser(user.ID, user.ID)
-	if err != nil {
+
+	if err := h.service.DeleteUser(user.ID, user.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

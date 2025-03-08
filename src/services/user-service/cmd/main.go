@@ -17,10 +17,41 @@ import (
 	"github.com/zahartd/social-network/src/services/user-service/internal/utils"
 )
 
+func PhoneValidator(fl validator.FieldLevel) bool {
+	phone, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return utils.ValidatePhone(phone)
+}
+
+func PasswordValidator(fl validator.FieldLevel) bool {
+	password, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return utils.ValidatePassword(password)
+}
+
+func LoginValidator(fl validator.FieldLevel) bool {
+	login, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return utils.ValidateLogin(login)
+}
+
 func initCustomValidators() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("phone", utils.PhoneValidator)
-		v.RegisterValidation("password", utils.PasswordValidator)
+		if err := v.RegisterValidation("phone", PhoneValidator); err != nil {
+			panic(err)
+		}
+		if err := v.RegisterValidation("password", PasswordValidator); err != nil {
+			panic(err)
+		}
+		if err := v.RegisterValidation("login", LoginValidator); err != nil {
+			panic(err)
+		}
 	}
 }
 

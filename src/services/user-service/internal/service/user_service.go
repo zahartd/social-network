@@ -4,9 +4,10 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService interface {
@@ -54,11 +55,11 @@ func (s *userService) CreateUser(login, firstname, surname, email, password stri
 func (s *userService) Login(login, password, ipAddress string) (*models.User, string, error) {
 	user, err := s.repo.GetByLogin(login)
 	if err != nil {
-		return nil, "", errors.New("invalid login or password")
+		return nil, "", errors.New("invalid login")
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return nil, "", errors.New("invalid login or password")
+		return nil, "", errors.New("invalid password")
 	}
 	return user, "", nil
 }

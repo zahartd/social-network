@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 	"github.com/zahartd/social-network/src/services/user-service/internal/service"
@@ -24,7 +25,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		Firstname string `json:"firstname" binding:"required"`
 		Surname   string `json:"surname" binding:"required"`
 		Email     string `json:"email" binding:"required,email"`
-		Password  string `json:"password" binding:"required,min=8"`
+		Password  string `json:"password" binding:"required,password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -85,6 +86,10 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	var user *models.User
 	var err error
 	if strings.Contains(identifier, "-") {
+		if _, err := uuid.Parse(identifier); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID format"})
+			return
+		}
 		user, err = h.service.GetUserByID(identifier)
 	} else {
 		user, err = h.service.GetUserByLogin(identifier)
@@ -117,6 +122,10 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	var user *models.User
 	var err error
 	if strings.Contains(identifier, "-") {
+		if _, err := uuid.Parse(identifier); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID format"})
+			return
+		}
 		user, err = h.service.GetUserByID(identifier)
 	} else {
 		user, err = h.service.GetUserByLogin(identifier)
@@ -134,8 +143,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		Email     string `json:"email" binding:"required,email"`
 		Firstname string `json:"firstname" binding:"required"`
 		Surname   string `json:"surname" binding:"required"`
-		Phone     string `json:"phone"`
-		Bio       string `json:"bio"`
+		Phone     string `json:"phone" binding:"omitempty,phone"`
+		Bio       string `json:"bio" binding:"omitempty,max=1400"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -148,12 +157,15 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, updatedUser)
 }
-
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	identifier := c.Param("identifier")
 	var user *models.User
 	var err error
 	if strings.Contains(identifier, "-") {
+		if _, err := uuid.Parse(identifier); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID format"})
+			return
+		}
 		user, err = h.service.GetUserByID(identifier)
 	} else {
 		user, err = h.service.GetUserByLogin(identifier)

@@ -6,13 +6,23 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	_ "github.com/lib/pq"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/handlers"
 	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
 	"github.com/zahartd/social-network/src/services/user-service/internal/service"
+	"github.com/zahartd/social-network/src/services/user-service/internal/utils"
 )
+
+func initCustomValidators() {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterValidation("phone", utils.PhoneValidator)
+		v.RegisterValidation("password", utils.PasswordValidator)
+	}
+}
 
 func main() {
 	dsn := os.Getenv("DB_DSN")
@@ -35,6 +45,8 @@ func main() {
 	auth.InitJWT()
 
 	router := gin.Default()
+
+	initCustomValidators()
 
 	router.POST("/user", userHandler.CreateUser)
 	router.GET("/user/login", userHandler.Login)

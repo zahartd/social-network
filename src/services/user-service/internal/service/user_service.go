@@ -16,7 +16,7 @@ type UserService interface {
 	GetUserByID(id string) (*models.User, error)
 	GetUserByLogin(login string) (*models.User, error)
 	UpdateUser(id string, email, firstname, surname, phone, bio string, requesterID string) (*models.User, error)
-	DeleteUser(id string, requesterID string) error
+	DeleteUser(id, token string) error
 }
 
 type userService struct {
@@ -92,9 +92,9 @@ func (s *userService) UpdateUser(id string, email, firstname, surname, phone, bi
 	return user, nil
 }
 
-func (s *userService) DeleteUser(id string, requesterID string) error {
-	if id != requesterID {
-		return errors.New("unauthorized: cannot delete another user's account")
+func (s *userService) DeleteUser(id, token string) error {
+	if err := s.sessionRepo.DeleteSessionByToken(token); err != nil {
+		return err
 	}
 	return s.repo.Delete(id)
 }

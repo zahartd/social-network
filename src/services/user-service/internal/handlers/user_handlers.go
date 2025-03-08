@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -78,7 +79,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 	if err := auth.CreateSession(user, token, c.ClientIP()); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Errorf("failed to create session: %w", err).Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"token": token})
@@ -206,7 +207,14 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteUser(user.ID, user.ID); err != nil {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing token"})
+		return
+	}
+	token = auth.TrimBearerPrefix(token)
+
+	if err := h.service.DeleteUser(user.ID, token); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

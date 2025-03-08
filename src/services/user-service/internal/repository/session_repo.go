@@ -27,7 +27,8 @@ func (r *postgresSessionRepo) CreateSession(session *models.Session) error {
 	INSERT INTO user_sessions (user_id, token, created_at, expires_at, ip_address)
 	VALUES ($1, $2, now(), $3, $4)
 	RETURNING id, created_at`
-	return r.db.QueryRow(query, session.UserID, session.Token, session.ExpiresAt, session.IPAddress).
+	ipStr := session.IPAddress.String()
+	return r.db.QueryRow(query, session.UserID, session.Token, session.ExpiresAt, ipStr).
 		Scan(&session.ID, &session.CreatedAt)
 }
 

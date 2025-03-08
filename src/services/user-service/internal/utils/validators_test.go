@@ -35,6 +35,8 @@ func TestPhoneValidator(t *testing.T) {
 		err := v.Struct(ts)
 		if (err == nil) != tt.valid {
 			t.Errorf("%s: expected valid=%v, got error: %v", tt.name, tt.valid, err)
+		} else if !tt.valid && err == nil {
+			t.Errorf("Expected error for %q, but got valid", tt.name)
 		}
 	}
 }

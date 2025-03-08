@@ -67,7 +67,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, _, err := h.service.Login(login, password, c.ClientIP())
+	user, _, err := h.service.Login(login, password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -75,6 +75,10 @@ func (h *UserHandler) Login(c *gin.Context) {
 	token, err := auth.GenerateToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+	if err := auth.CreateSession(user, token, c.ClientIP()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"token": token})

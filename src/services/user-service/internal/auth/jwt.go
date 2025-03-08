@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
 )
+
+const tokenExpireTime = 3 * time.Minute
 
 var (
 	rsaPrivateKey *rsa.PrivateKey
@@ -57,11 +60,28 @@ func GenerateToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"login": user.Login,
-		"exp":   time.Now().Add(3 * time.Minute).Unix(),
+		"exp":   time.Now().Add(tokenExpireTime).Unix(),
 		"iat":   time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	return token.SignedString(rsaPrivateKey)
+}
+
+func CreateSession(user *models.User, token string, ipAddress string) error {
+	if sessionRepo == nil {
+		return fmt.Errorf("session repository is not set")
+	}
+	ip := net.ParseIP(ipAddress)
+	if ip == nil {
+		return fmt.Errorf("invalid IP address: %s", ipAddress)
+	}
+	session := &models.Session{
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: time.Now().Add(tokenExpireTime),
+		IPAddress: ip,
+	}
+	return sessionRepo.CreateSession(session)
 }
 
 func TrimBearerPrefix(token string) string {

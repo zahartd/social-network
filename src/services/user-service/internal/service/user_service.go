@@ -12,7 +12,7 @@ import (
 
 type UserService interface {
 	CreateUser(login, firstname, surname, email, password string) (*models.User, error)
-	Login(login, password, ipAddress string) (*models.User, string, error)
+	Login(login, password string) (*models.User, string, error)
 	GetUserByID(id string) (*models.User, error)
 	GetUserByLogin(login string) (*models.User, error)
 	UpdateUser(id string, email, firstname, surname, phone, bio string, requesterID string) (*models.User, error)
@@ -52,7 +52,7 @@ func (s *userService) CreateUser(login, firstname, surname, email, password stri
 	return user, nil
 }
 
-func (s *userService) Login(login, password, ipAddress string) (*models.User, string, error) {
+func (s *userService) Login(login, password string) (*models.User, string, error) {
 	user, err := s.repo.GetByLogin(login)
 	if err != nil {
 		return nil, "", errors.New("invalid login")

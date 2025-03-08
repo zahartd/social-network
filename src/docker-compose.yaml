@@ -5,8 +5,8 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=userdb
-    ports:
-      - 5432:5432
+    # ports:
+    #   - 5432:5432
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -21,8 +21,8 @@ services:
   user-service:
     build:
       context: ./services/user-service
-    ports:
-      - 8081:8081
+    # ports:
+    #   - 8081:8081
     environment:
       - DB_DSN=postgres://postgres:secret@postgres:5432/userdb?sslmode=disable
       - JWT_PRIVATE_KEY=/app/certs/id_rsa

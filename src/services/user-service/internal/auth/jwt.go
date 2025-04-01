@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"time"
 
@@ -101,7 +102,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		tokenStr := c.GetHeader("Authorization")
 		if tokenStr == "" {
 			log.Println("Missing Authorization token")
-			c.AbortWithStatusJSON(401, gin.H{"error": "Missing Authorization token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization token"})
 			return
 		}
 		tokenStr = TrimBearerPrefix(tokenStr)
@@ -113,23 +114,23 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		})
 		if err != nil || !token.Valid {
 			log.Printf("Invalid token: %v", err)
-			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
 		sess, err := sessionRepo.GetSessionByToken(tokenStr)
 		if err != nil {
 			log.Printf("Session not found: %v", err)
-			c.AbortWithStatusJSON(401, gin.H{"error": "Session not found"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Session not found"})
 			return
 		}
 		if time.Now().After(sess.ExpiresAt) {
 			log.Println("Session expired")
-			c.AbortWithStatusJSON(401, gin.H{"error": "Session expired"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Session expired"})
 			return
 		}
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid token claims"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 			return
 		}
 		c.Set("userID", claims["sub"])

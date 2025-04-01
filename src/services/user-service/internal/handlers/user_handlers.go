@@ -70,7 +70,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 
 	user, _, err := h.service.Login(login, password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	token, err := auth.GenerateToken(user)

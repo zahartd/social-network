@@ -8,7 +8,7 @@ import (
 	"log"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/zahartd/social_network/post-service/internal/models"
+	"github.com/zahartd/social-network/src/services/post-service/internal/models"
 )
 
 var ErrPostNotFound = errors.New("post not found")
@@ -47,7 +47,7 @@ func (r *postgresPostRepository) CreatePost(ctx context.Context, post *models.Po
 func (r *postgresPostRepository) GetPostByID(ctx context.Context, postID string) (*models.Post, error) {
 	query := `SELECT id, user_id, title, description, created_at, updated_at, is_private, tags FROM posts WHERE id = $1`
 	var post models.Post
-	err := r.db.GetContext(ctx, &post, query, postID)
+	err := r.db.Get(&post, query, postID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrPostNotFound

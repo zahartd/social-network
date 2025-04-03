@@ -14,9 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
+	postpb "github.com/zahartd/social-network/src/gen/go/post"
 	"github.com/zahartd/social-network/src/services/api-gateway/client"
 	"github.com/zahartd/social-network/src/services/api-gateway/handlers"
-	postpb "github.com/zahartd/social-network/src/services/api-gateway/pkg/grpc/post"
 )
 
 var (

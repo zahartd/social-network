@@ -6,10 +6,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/zahartd/social_network/post-service/internal/auth"
-	"github.com/zahartd/social_network/post-service/internal/models"
-	"github.com/zahartd/social_network/post-service/internal/repository"
-	postpb "github.com/zahartd/social_network/post-service/pkg/grpc/post"
+	"github.com/lib/pq"
+	postpb "github.com/zahartd/social-network/src/gen/go/post"
+	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
+	"github.com/zahartd/social-network/src/services/post-service/internal/models"
+	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -68,7 +69,7 @@ func (s *PostService) CreatePost(ctx context.Context, req *postpb.CreatePostRequ
 		Title:       req.GetTitle(),
 		Description: req.GetDescription(),
 		IsPrivate:   req.GetIsPrivate(),
-		Tags:        models.StringArray(req.GetTags()),
+		Tags:        pq.StringArray(req.GetTags()),
 	}
 
 	postID, err := s.repo.CreatePost(ctx, newPost)
@@ -142,7 +143,7 @@ func (s *PostService) UpdatePost(ctx context.Context, req *postpb.UpdatePostRequ
 		Title:       req.GetTitle(),
 		Description: req.GetDescription(),
 		IsPrivate:   req.GetIsPrivate(),
-		Tags:        models.StringArray(req.GetTags()),
+		Tags:        pq.StringArray(req.GetTags()),
 	}
 
 	err = s.repo.UpdatePost(ctx, updatedPostData)

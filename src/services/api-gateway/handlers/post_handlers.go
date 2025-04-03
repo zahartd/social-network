@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	postpb "github.com/zahartd/social-network/src/services/api-gateway/pkg/grpc/post"
+	postpb "github.com/zahartd/social-network/src/gen/go/post"
 )
 
 const UserIDMetadataKey = "x-user-id"

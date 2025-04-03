@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package post;
 
-option go_package = "github.com/zahartd/social_network/post-service/pkg/grpc/post";
+option go_package = "github.com/zahartd/social-network/src/gen/go/post";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";

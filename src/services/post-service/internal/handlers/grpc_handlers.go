@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/zahartd/social_network/post-service/internal/service"
-	postpb "github.com/zahartd/social_network/post-service/pkg/grpc/post"
+	"github.com/zahartd/social-network/src/services/post-service/internal/service"
+	postpb "github.com/zahartd/social-network/src/gen/go/post"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 

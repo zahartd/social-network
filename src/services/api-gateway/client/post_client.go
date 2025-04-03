@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	postpb "github.com/zahartd/social-network/src/services/api-gateway/pkg/grpc/post"
+	postpb "github.com/zahartd/social-network/src/gen/go/post"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

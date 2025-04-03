@@ -57,6 +57,9 @@ curl -X DELETE http://localhost:8080/user/john_doe \
 ## Сборка и запуск
 
 ```bash
+MODULE_PATH="github.com/zahartd/social-network/src/services/post-service"
+protoc -I src --go_out=src/services/post-service/ --go-grpc_out=src/services/post-service/ src/proto/post/post.proto
 docker-compose down --rmi all --volumes --remove-orphans
 docker compose up --build
 docker compose up migrate
+docker system prune -af --volumes

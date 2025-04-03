@@ -12,12 +12,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/zahartd/social_network/post-service/internal/auth"
-	"github.com/zahartd/social_network/post-service/internal/config"
-	"github.com/zahartd/social_network/post-service/internal/handlers"
-	"github.com/zahartd/social_network/post-service/internal/repository"
-	"github.com/zahartd/social_network/post-service/internal/service"
-	postpb "github.com/zahartd/social_network/post-service/pkg/grpc/post"
+	postpb "github.com/zahartd/social-network/src/gen/go/post"
+	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
+	"github.com/zahartd/social-network/src/services/post-service/internal/config"
+	"github.com/zahartd/social-network/src/services/post-service/internal/handlers"
+	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
+	"github.com/zahartd/social-network/src/services/post-service/internal/service"
 )
 
 func main() {

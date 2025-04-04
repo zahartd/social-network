@@ -2,7 +2,7 @@
 
 ## cURL
 
-## Регистрация
+## Signup
 
 ```bash
 curl -X POST http://localhost:8080/user \
@@ -16,7 +16,7 @@ curl -X POST http://localhost:8080/user \
       }'
 ```
 
-## Логин
+## Login
 
 ```bash
 curl -G http://localhost:8080/user/login \
@@ -24,7 +24,7 @@ curl -G http://localhost:8080/user/login \
   --data-urlencode "password=Password123"
 ```
 
-## Выход
+## Logout
 
 ```bash
 curl -X GET http://localhost:8080/user/logout \
@@ -53,12 +53,73 @@ curl -X DELETE http://localhost:8080/user/john_doe \
   -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
+## Create new post
+
+```bash
+curl -X POST http://localhost:8080/posts \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Мой первый пост",
+    "description": "Это содержимое поста, созданного для тестирования.",
+    "is_private": false,
+    "tags": ["тест", "golang", "api"]
+  }'
+```
+
+## Get post by id
+
+```bash
+curl -X GET http://localhost:8080/posts/$POST_ID \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Update post
+
+```bash
+curl -X PUT http://localhost:8080/posts/$POST_ID \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Обновленный заголовок поста",
+    "description": "Это обновленное описание. Пост теперь приватный!",
+    "is_private": true,
+    "tags": ["тест", "обновление", "приватность"]
+  }'
+```
+
+## Delete post
+
+```bash
+curl -X DELETE http://localhost:8080/posts/$POST_ID \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Get list of my post (pagination)
+
+```bash
+curl -X GET 'http://localhost:8080/posts/list/my?page=1&page_size=3' \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Get list of all public posts of all users (pagination)
+
+```bash
+curl -X GET 'http://localhost:8080/posts/list/public?page=1&page_size=15' \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Get list of all public posts of user with user_id=$USER_ID (pagination)
+
+```bash
+curl -X GET "http://localhost:8080/posts/list/public/${USER_ID}?page=1&page_size=4" \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
 
 ## Сборка и запуск
 
 ```bash
-MODULE_PATH="github.com/zahartd/social-network/src/services/post-service"
-protoc -I src --go_out=src/services/post-service/ --go-grpc_out=src/services/post-service/ src/proto/post/post.proto
+protoc --proto_path=src/proto --go_out=src/gen/go --go_opt=paths=source_relative --go-grpc_out=src/gen/go --go-grpc_opt=paths=source_relative src/proto/post/post.proto
 docker-compose down --rmi all --volumes --remove-orphans
 docker compose up --build
 docker compose up migrate

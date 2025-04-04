@@ -12,7 +12,7 @@ service PostService {
   rpc GetPost (GetPostRequest) returns (PostResponse);
   rpc UpdatePost (UpdatePostRequest) returns (PostResponse);
   rpc DeletePost (DeletePostRequest) returns (google.protobuf.Empty);
-  rpc ListUserPosts (ListUserPostsRequest) returns (ListPostsResponse);
+  rpc ListMyPosts (ListMyPostsRequest) returns (ListPostsResponse);
   rpc ListPublicPosts (ListPublicPostsRequest) returns (ListPostsResponse);
 }
 
@@ -34,6 +34,10 @@ message CreatePostRequest {
   repeated string tags = 4;
 }
 
+message PostResponse {
+  Post post = 1;
+}
+
 message GetPostRequest {
   string post_id = 1;
 }
@@ -50,7 +54,7 @@ message DeletePostRequest {
   string post_id = 1;
 }
 
-message ListUserPostsRequest {
+message ListMyPostsRequest {
   int32 page = 1;
   int32 page_size = 2;
 }
@@ -58,11 +62,7 @@ message ListUserPostsRequest {
 message ListPublicPostsRequest {
   int32 page = 1;
   int32 page_size = 2;
-}
-
-
-message PostResponse {
-  Post post = 1;
+  optional string user_id = 3;
 }
 
 message ListPostsResponse {

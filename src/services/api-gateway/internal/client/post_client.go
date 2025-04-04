@@ -15,11 +15,13 @@ func InitPostServiceClient() postpb.PostServiceClient {
 		log.Fatal("POST_SERVICE_GRPC_URL environment variable is not set")
 	}
 
-	conn, err := grpc.NewClient(postServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	connOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	conn, err := grpc.NewClient(postServiceURL, connOpts...)
 	if err != nil {
 		log.Fatalf("Failed to connect to post service at %s: %v", postServiceURL, err)
 	}
-
-	log.Printf("Successfully connected to post service at %s", postServiceURL)
 	return postpb.NewPostServiceClient(conn)
 }

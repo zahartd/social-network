@@ -6,14 +6,14 @@ import (
 )
 
 type Config struct {
-	GRPCPort string
-	DB_DSN   string
+	Port   string
+	DB_DSN string
 }
 
 func Load() *Config {
-	port := os.Getenv("GRPC_PORT")
+	port := os.Getenv("PORT")
 	if port == "" {
-		port = "50051"
+		port = "8081"
 	}
 
 	dbDSN := os.Getenv("DB_DSN")
@@ -22,7 +22,7 @@ func Load() *Config {
 	}
 
 	return &Config{
-		GRPCPort: port,
-		DB_DSN:   dbDSN,
+		Port:   port,
+		DB_DSN: dbDSN,
 	}
 }

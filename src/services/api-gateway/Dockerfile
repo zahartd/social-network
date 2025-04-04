@@ -7,7 +7,7 @@ COPY services/user-service/go.mod services/user-service/go.sum ./services/user-s
 COPY gen/go/go.mod gen/go/go.sum ./gen/go/
 RUN go work sync
 COPY . .
-RUN go build -o /app/api-gateway ./services/api-gateway
+RUN go build -o /app/api-gateway ./services/api-gateway/cmd
 
 FROM alpine:latest
 WORKDIR /app

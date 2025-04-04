@@ -30,8 +30,8 @@ func main() {
 	defer db.Close()
 
 	postRepo := repository.NewPostgresPostRepository(db)
-	postSvc := service.NewPostService(postRepo)
-	postHandler := handlers.NewPostGRPCHandler(postSvc)
+	postService := service.NewPostService(postRepo)
+	postHandler := handlers.NewPostGRPCHandler(postService)
 
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(auth.AuthInterceptor),
@@ -45,8 +45,6 @@ func main() {
 		log.Fatalf("Failed to listen on port %s: %v", cfg.GRPCPort, err)
 	}
 
-	log.Printf("gRPC server listening on port %s", cfg.GRPCPort)
-
 	go func() {
 		if err := grpcServer.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve gRPC: %v", err)
@@ -57,7 +55,5 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down gRPC server...")
 	grpcServer.GracefulStop()
-	log.Println("Server gracefully stopped")
 }

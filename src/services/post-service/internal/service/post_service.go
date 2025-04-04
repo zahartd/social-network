@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -44,14 +43,13 @@ func handleRepoError(err error, operation string, postID string) error {
 	if err == nil {
 		return nil
 	}
-	log.Printf("Service Error: %s failed for ID '%s': %v", operation, postID, err)
 	if errors.Is(err, repository.ErrPostNotFound) {
-		return status.Errorf(codes.NotFound, "post not found")
+		return status.Errorf(codes.NotFound, "post %s not found", postID)
 	}
 	if errors.Is(err, repository.ErrForbidden) {
 		return status.Errorf(codes.PermissionDenied, "permission denied")
 	}
-	return status.Errorf(codes.Internal, "failed to %s post: %v", operation, err)
+	return status.Errorf(codes.Internal, "failed to %s post %s: %v", operation, postID, err)
 }
 
 func (s *PostService) CreatePost(ctx context.Context, req *postpb.CreatePostRequest) (*models.Post, error) {
@@ -80,7 +78,6 @@ func (s *PostService) CreatePost(ctx context.Context, req *postpb.CreatePostRequ
 
 	createdPost, err := s.repo.GetPostByID(ctx, postID)
 	if err != nil {
-		log.Printf("Service Warning: Failed to retrieve created post %s immediately: %v", postID, err)
 		newPost.CreatedAt = time.Now()
 		newPost.UpdatedAt = newPost.CreatedAt
 		return newPost, nil
@@ -105,7 +102,6 @@ func (s *PostService) GetPost(ctx context.Context, postID string) (*models.Post,
 			return nil, err
 		}
 		if requestingUserID == "" || post.UserID != requestingUserID {
-			log.Printf("Service Auth Error: User '%s' tried to access private post %s of user %s", requestingUserID, postID, post.UserID)
 			return nil, status.Errorf(codes.PermissionDenied, "you do not have permission to view this post")
 		}
 	}
@@ -133,7 +129,6 @@ func (s *PostService) UpdatePost(ctx context.Context, req *postpb.UpdatePostRequ
 	}
 
 	if authorID != userID {
-		log.Printf("Service Auth Error: User %s tried to update post %s owned by %s", userID, postID, authorID)
 		return nil, status.Errorf(codes.PermissionDenied, "you are not authorized to update this post")
 	}
 
@@ -153,7 +148,6 @@ func (s *PostService) UpdatePost(ctx context.Context, req *postpb.UpdatePostRequ
 
 	updatedPost, err := s.repo.GetPostByID(ctx, postID)
 	if err != nil {
-		log.Printf("Service Warning: Failed to retrieve updated post %s immediately: %v", postID, err)
 		updatedPostData.UpdatedAt = time.Now()
 		return updatedPostData, nil
 	}
@@ -179,7 +173,7 @@ func (s *PostService) DeletePost(ctx context.Context, postID string) error {
 	return nil
 }
 
-func (s *PostService) ListUserPosts(ctx context.Context, req *postpb.ListUserPostsRequest) ([]*postpb.Post, int, error) {
+func (s *PostService) ListMyPosts(ctx context.Context, req *postpb.ListMyPostsRequest) ([]*postpb.Post, int, error) {
 	userID, err := auth.GetUserIDFromContext(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -188,24 +182,20 @@ func (s *PostService) ListUserPosts(ctx context.Context, req *postpb.ListUserPos
 	page := int(req.GetPage())
 	pageSize := int(req.GetPageSize())
 	if page < 1 {
-		page = 1
+		return nil, 0, status.Error(codes.InvalidArgument, "page should be a positive number")
 	}
 	if pageSize < 1 {
-		pageSize = 10
-	}
-	if pageSize > 100 {
-		pageSize = 100
+		return nil, 0, status.Error(codes.InvalidArgument, "page_size should be a positive number")
 	}
 
-	posts, totalCount, err := s.repo.ListUserPosts(ctx, userID, page, pageSize)
+	posts, totalCount, err := s.repo.GetUserPosts(ctx, userID, page, pageSize)
 	if err != nil {
-		log.Printf("Service Error: ListUserPosts failed for user %s: %v", userID, err)
 		return nil, 0, status.Errorf(codes.Internal, "failed to list user posts: %v", err)
 	}
 
-	protoPosts := make([]*postpb.Post, len(posts))
-	for i, post := range posts {
-		protoPosts[i] = ToProtoPost(&post)
+	protoPosts := make([]*postpb.Post, 0, len(posts))
+	for _, post := range posts {
+		protoPosts = append(protoPosts, ToProtoPost(&post))
 	}
 
 	return protoPosts, totalCount, nil
@@ -215,24 +205,22 @@ func (s *PostService) ListPublicPosts(ctx context.Context, req *postpb.ListPubli
 	page := int(req.GetPage())
 	pageSize := int(req.GetPageSize())
 	if page < 1 {
-		page = 1
+		return nil, 0, status.Error(codes.InvalidArgument, "page should be a positive number")
 	}
 	if pageSize < 1 {
-		pageSize = 10
-	}
-	if pageSize > 100 {
-		pageSize = 100
+		return nil, 0, status.Error(codes.InvalidArgument, "page_size should be a positive number")
 	}
 
-	posts, totalCount, err := s.repo.ListPublicPosts(ctx, page, pageSize)
+	filterUserID := req.UserId
+
+	posts, totalCount, err := s.repo.GetPublicPosts(ctx, filterUserID, page, pageSize)
 	if err != nil {
-		log.Printf("Service Error: ListPublicPosts failed: %v", err)
 		return nil, 0, status.Errorf(codes.Internal, "failed to list public posts: %v", err)
 	}
 
-	protoPosts := make([]*postpb.Post, len(posts))
-	for i, post := range posts {
-		protoPosts[i] = ToProtoPost(&post)
+	protoPosts := make([]*postpb.Post, 0, len(posts))
+	for _, post := range posts {
+		protoPosts = append(protoPosts, ToProtoPost(&post))
 	}
 
 	return protoPosts, totalCount, nil

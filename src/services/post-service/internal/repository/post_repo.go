@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/zahartd/social-network/src/services/post-service/internal/models"
@@ -19,8 +18,8 @@ type PostRepository interface {
 	GetPostByID(ctx context.Context, postID string) (*models.Post, error)
 	UpdatePost(ctx context.Context, post *models.Post) error
 	DeletePost(ctx context.Context, postID string, userID string) error
-	ListUserPosts(ctx context.Context, userID string, page, pageSize int) ([]models.Post, int, error)
-	ListPublicPosts(ctx context.Context, page, pageSize int) ([]models.Post, int, error)
+	GetUserPosts(ctx context.Context, userID string, page, pageSize int) ([]models.Post, int, error)
+	GetPublicPosts(ctx context.Context, filterUserID *string, page, pageSize int) ([]models.Post, int, error)
 	GetPostAuthorID(ctx context.Context, postID string) (string, error)
 }
 
@@ -38,7 +37,6 @@ func (r *postgresPostRepository) CreatePost(ctx context.Context, post *models.Po
 	var postID string
 	err := r.db.QueryRowContext(ctx, query, post.UserID, post.Title, post.Description, post.IsPrivate, post.Tags).Scan(&postID)
 	if err != nil {
-		log.Printf("Error creating post: %v", err)
 		return "", fmt.Errorf("could not create post: %w", err)
 	}
 	return postID, nil
@@ -52,7 +50,6 @@ func (r *postgresPostRepository) GetPostByID(ctx context.Context, postID string)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrPostNotFound
 		}
-		log.Printf("Error getting post by ID %s: %v", postID, err)
 		return nil, fmt.Errorf("could not get post: %w", err)
 	}
 	return &post, nil
@@ -66,7 +63,6 @@ func (r *postgresPostRepository) GetPostAuthorID(ctx context.Context, postID str
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", ErrPostNotFound
 		}
-		log.Printf("Error getting author ID for post %s: %v", postID, err)
 		return "", fmt.Errorf("database error fetching author: %w", err)
 	}
 	return userID, nil
@@ -77,12 +73,10 @@ func (r *postgresPostRepository) UpdatePost(ctx context.Context, post *models.Po
               WHERE id = $5`
 	result, err := r.db.ExecContext(ctx, query, post.Title, post.Description, post.IsPrivate, post.Tags, post.ID)
 	if err != nil {
-		log.Printf("Error updating post %s: %v", post.ID, err)
 		return fmt.Errorf("could not update post: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("Error getting rows affected for post update %s: %v", post.ID, err)
 		return fmt.Errorf("could not verify post update: %w", err)
 	}
 	if rowsAffected == 0 {
@@ -95,12 +89,10 @@ func (r *postgresPostRepository) DeletePost(ctx context.Context, postID string, 
 	query := `DELETE FROM posts WHERE id = $1 AND user_id = $2`
 	result, err := r.db.ExecContext(ctx, query, postID, userID)
 	if err != nil {
-		log.Printf("Error deleting post %s for user %s: %v", postID, userID, err)
 		return fmt.Errorf("could not delete post: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.Printf("Error getting rows affected for post delete %s: %v", postID, err)
 		return fmt.Errorf("could not verify post deletion: %w", err)
 	}
 	if rowsAffected == 0 {
@@ -108,7 +100,6 @@ func (r *postgresPostRepository) DeletePost(ctx context.Context, postID string, 
 		var exists bool
 		err := r.db.QueryRowContext(ctx, existsQuery, postID).Scan(&exists)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			log.Printf("Error checking post existence %s: %v", postID, err)
 			return fmt.Errorf("could not delete post %s", postID)
 		}
 		if !exists {
@@ -119,7 +110,7 @@ func (r *postgresPostRepository) DeletePost(ctx context.Context, postID string, 
 	return nil
 }
 
-func (r *postgresPostRepository) ListUserPosts(ctx context.Context, userID string, page, pageSize int) ([]models.Post, int, error) {
+func (r *postgresPostRepository) GetUserPosts(ctx context.Context, userID string, page, pageSize int) ([]models.Post, int, error) {
 	offset := (page - 1) * pageSize
 	query := `SELECT id, user_id, title, description, created_at, updated_at, is_private, tags
               FROM posts
@@ -130,7 +121,6 @@ func (r *postgresPostRepository) ListUserPosts(ctx context.Context, userID strin
 	posts := []models.Post{}
 	err := r.db.SelectContext(ctx, &posts, query, userID, pageSize, offset)
 	if err != nil {
-		log.Printf("Error listing user %s posts: %v", userID, err)
 		return nil, 0, fmt.Errorf("could not list user posts: %w", err)
 	}
 
@@ -138,35 +128,43 @@ func (r *postgresPostRepository) ListUserPosts(ctx context.Context, userID strin
 	var totalCount int
 	err = r.db.GetContext(ctx, &totalCount, countQuery, userID)
 	if err != nil {
-		log.Printf("Error counting user %s posts: %v", userID, err)
 		return nil, 0, fmt.Errorf("could not count user posts: %w", err)
 	}
 
 	return posts, totalCount, nil
 }
 
-func (r *postgresPostRepository) ListPublicPosts(ctx context.Context, page, pageSize int) ([]models.Post, int, error) {
+func (r *postgresPostRepository) GetPublicPosts(ctx context.Context, filterUserID *string, page, pageSize int) ([]models.Post, int, error) {
 	offset := (page - 1) * pageSize
-	query := `SELECT id, user_id, title, description, created_at, updated_at, is_private, tags
-              FROM posts
-              WHERE is_private = FALSE
-              ORDER BY created_at DESC
-              LIMIT $1 OFFSET $2`
+	args := []any{}
+	countArgs := []any{}
+
+	queryBase := `SELECT id, user_id, title, description, created_at, updated_at, is_private, tags FROM posts`
+	countQueryBase := `SELECT COUNT(*) FROM posts`
+	whereClause := ` WHERE is_private = FALSE`
+
+	paramIndex := 1
+	if filterUserID != nil && *filterUserID != "" {
+		whereClause += fmt.Sprintf(" AND user_id = $%d", paramIndex)
+		args = append(args, *filterUserID)
+		countArgs = append(countArgs, *filterUserID)
+		paramIndex++
+	}
+
+	query := queryBase + whereClause + fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", paramIndex, paramIndex+1)
+	args = append(args, pageSize, offset)
+	countQuery := countQueryBase + whereClause
 
 	posts := []models.Post{}
-	err := r.db.SelectContext(ctx, &posts, query, pageSize, offset)
+	err := r.db.SelectContext(ctx, &posts, query, args...)
 	if err != nil {
-		log.Printf("Error listing public posts (page %d, size %d): %v", page, pageSize, err)
-		return nil, 0, fmt.Errorf("could not list public posts: %w", err)
+		return nil, 0, fmt.Errorf("database query error: %w", err)
 	}
 
-	countQuery := `SELECT COUNT(*) FROM posts WHERE is_private = FALSE`
 	var totalCount int
-	err = r.db.GetContext(ctx, &totalCount, countQuery)
+	err = r.db.GetContext(ctx, &totalCount, countQuery, countArgs...)
 	if err != nil {
-		log.Printf("Error counting public posts: %v", err)
-		return nil, 0, fmt.Errorf("could not count public posts: %w", err)
+		return nil, 0, fmt.Errorf("database count query error: %w", err)
 	}
-
 	return posts, totalCount, nil
 }

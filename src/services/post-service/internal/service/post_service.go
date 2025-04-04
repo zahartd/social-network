@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/lib/pq"
@@ -10,6 +11,7 @@ import (
 	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/post-service/internal/models"
 	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
+	"github.com/zahartd/social-network/src/services/post-service/internal/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -57,6 +59,10 @@ func (s *PostService) CreatePost(ctx context.Context, req *postpb.CreatePostRequ
 	if err != nil {
 		return nil, err
 	}
+	err = utils.ValidateUserID(userID)
+	if err != nil {
+		return nil, err
+	}
 
 	if req.GetTitle() == "" {
 		return nil, status.Error(codes.InvalidArgument, "title is required")
@@ -90,6 +96,10 @@ func (s *PostService) GetPost(ctx context.Context, postID string) (*models.Post,
 	if postID == "" {
 		return nil, status.Error(codes.InvalidArgument, "post ID is required")
 	}
+	err := utils.ValidatePostID(postID)
+	if err != nil {
+		return nil, err
+	}
 
 	post, err := s.repo.GetPostByID(ctx, postID)
 	if err != nil {
@@ -114,10 +124,18 @@ func (s *PostService) UpdatePost(ctx context.Context, req *postpb.UpdatePostRequ
 	if err != nil {
 		return nil, err
 	}
+	err = utils.ValidateUserID(userID)
+	if err != nil {
+		return nil, err
+	}
 
 	postID := req.GetPostId()
 	if postID == "" {
 		return nil, status.Error(codes.InvalidArgument, "post ID is required")
+	}
+	err = utils.ValidatePostID(postID)
+	if err != nil {
+		return nil, err
 	}
 	if req.GetTitle() == "" {
 		return nil, status.Error(codes.InvalidArgument, "title cannot be empty")
@@ -160,9 +178,17 @@ func (s *PostService) DeletePost(ctx context.Context, postID string) error {
 	if err != nil {
 		return err
 	}
+	err = utils.ValidateUserID(userID)
+	if err != nil {
+		return err
+	}
 
 	if postID == "" {
 		return status.Error(codes.InvalidArgument, "post ID is required")
+	}
+	err = utils.ValidatePostID(postID)
+	if err != nil {
+		return err
 	}
 
 	err = s.repo.DeletePost(ctx, postID, userID)
@@ -178,14 +204,20 @@ func (s *PostService) ListMyPosts(ctx context.Context, req *postpb.ListMyPostsRe
 	if err != nil {
 		return nil, 0, err
 	}
+	err = utils.ValidateUserID(userID)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	page := int(req.GetPage())
-	pageSize := int(req.GetPageSize())
-	if page < 1 {
-		return nil, 0, status.Error(codes.InvalidArgument, "page should be a positive number")
+	_, err = utils.ValidatePage(strconv.Itoa(page))
+	if err != nil {
+		return nil, 0, err
 	}
-	if pageSize < 1 {
-		return nil, 0, status.Error(codes.InvalidArgument, "page_size should be a positive number")
+	pageSize := int(req.GetPageSize())
+	_, err = utils.ValidatePage(strconv.Itoa(pageSize))
+	if err != nil {
+		return nil, 0, err
 	}
 
 	posts, totalCount, err := s.repo.GetUserPosts(ctx, userID, page, pageSize)
@@ -203,12 +235,14 @@ func (s *PostService) ListMyPosts(ctx context.Context, req *postpb.ListMyPostsRe
 
 func (s *PostService) ListPublicPosts(ctx context.Context, req *postpb.ListPublicPostsRequest) ([]*postpb.Post, int, error) {
 	page := int(req.GetPage())
-	pageSize := int(req.GetPageSize())
-	if page < 1 {
-		return nil, 0, status.Error(codes.InvalidArgument, "page should be a positive number")
+	_, err := utils.ValidatePage(strconv.Itoa(page))
+	if err != nil {
+		return nil, 0, err
 	}
-	if pageSize < 1 {
-		return nil, 0, status.Error(codes.InvalidArgument, "page_size should be a positive number")
+	pageSize := int(req.GetPageSize())
+	_, err = utils.ValidatePage(strconv.Itoa(pageSize))
+	if err != nil {
+		return nil, 0, err
 	}
 
 	filterUserID := req.UserId

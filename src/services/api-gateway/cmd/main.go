@@ -25,10 +25,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Invalid USER_SERVICE_URL: %v", err)
 	}
-	log.Printf("User service proxy target URL: %s", userServiceURLStr)
 
 	r := router.SetupRouter(postClient, userServiceURL)
-	log.Println("Router setup complete")
 
 	port := os.Getenv("PORT")
 	if port == "" {

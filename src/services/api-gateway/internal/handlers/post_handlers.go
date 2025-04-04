@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	postpb "github.com/zahartd/social-network/src/gen/go/post"
+	"github.com/zahartd/social-network/src/services/api-gateway/internal/utils"
 )
 
 const UserIDMetadataKey = "x-user-id"
@@ -33,12 +33,12 @@ func createAuthContext(c *gin.Context) (context.Context, error) {
 	if !exists {
 		return nil, status.Error(codes.Internal, "internal error: user ID missing after auth middleware")
 	}
-	userID, ok := userIDValue.(string)
-	if !ok || userID == "" {
-		return nil, status.Error(codes.Internal, "internal error: invalid user ID format in context")
+	err := utils.ValidateUserID(userIDValue)
+	if err != nil {
+		return nil, err
 	}
 
-	md := metadata.New(map[string]string{UserIDMetadataKey: userID})
+	md := metadata.New(map[string]string{UserIDMetadataKey: userIDValue.(string)})
 	ctx := metadata.NewOutgoingContext(c.Request.Context(), md)
 	return ctx, nil
 }
@@ -50,15 +50,13 @@ func parsePagination(c *gin.Context) (page, pageSize int, err error) {
 	pageStr := c.DefaultQuery("page", strconv.Itoa(defaultPage))
 	pageSizeStr := c.DefaultQuery("page_size", strconv.Itoa(defaultPageSize))
 
-	var errPage, errPageSize error
-	page, errPage = strconv.Atoi(pageStr)
-	pageSize, errPageSize = strconv.Atoi(pageSizeStr)
-
-	if errPage != nil || page < 1 {
-		return 0, 0, fmt.Errorf("page must be a positive integer")
+	page, err = utils.ValidatePage(pageStr)
+	if err != nil {
+		return 0, 0, err
 	}
-	if errPageSize != nil || pageSize < 1 {
-		return 0, 0, fmt.Errorf("page_size must be a positive integer")
+	pageSize, err = utils.ValidatePageSize(pageSizeStr)
+	if err != nil {
+		return 0, 0, err
 	}
 
 	return page, pageSize, nil
@@ -73,6 +71,10 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 
 	if req.Title == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
+		return
+	}
+	if req.Description == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "description is required"})
 		return
 	}
 
@@ -97,6 +99,10 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter is required"})
 		return
 	}
+	err := utils.ValidatePostID(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
 
 	ctx, err := createAuthContext(c)
 	if err != nil {
@@ -118,6 +124,10 @@ func (h *PostHandler) UpdatePost(c *gin.Context) {
 	if postID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter is required"})
 		return
+	}
+	err := utils.ValidatePostID(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
 	var reqBody struct {
@@ -175,6 +185,10 @@ func (h *PostHandler) DeletePost(c *gin.Context) {
 	if postID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter is required"})
 		return
+	}
+	err := utils.ValidatePostID(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
 	ctx, err := createAuthContext(c)
@@ -249,6 +263,10 @@ func (h *PostHandler) GetUserPublicPosts(c *gin.Context) {
 	if targetUserID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID parameter (:userID) is required"})
 		return
+	}
+	err := utils.ValidateUserID(targetUserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
 	page, pageSize, err := parsePagination(c)

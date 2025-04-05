@@ -7,10 +7,11 @@ COPY services/user-service/go.mod services/user-service/go.sum ./services/user-s
 COPY gen/go/go.mod gen/go/go.sum ./gen/go/
 RUN go work sync
 COPY . .
-RUN go build -o /app/api-gateway ./services/api-gateway/cmd
+RUN go build -o /app/post-service ./services/post-service/cmd
 
 FROM alpine:latest
 WORKDIR /app
-RUN apk add --no-cache ca-certificates
-COPY --from=builder /app/api-gateway .
-CMD ["./api-gateway"]
+COPY --from=builder /app/post-service .
+COPY ./services/post-service/migrations ./migrations
+EXPOSE 50051
+CMD ["./post-service"]

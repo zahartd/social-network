@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package post;
+
+option go_package = "github.com/zahartd/social-network/src/gen/go/post";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service PostService {
+  rpc CreatePost (CreatePostRequest) returns (PostResponse);
+  rpc GetPost (GetPostRequest) returns (PostResponse);
+  rpc UpdatePost (UpdatePostRequest) returns (PostResponse);
+  rpc DeletePost (DeletePostRequest) returns (google.protobuf.Empty);
+  rpc ListMyPosts (ListMyPostsRequest) returns (ListPostsResponse);
+  rpc ListPublicPosts (ListPublicPostsRequest) returns (ListPostsResponse);
+}
+
+message Post {
+  string id = 1;
+  string user_id = 2;
+  string title = 3;
+  string description = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  bool is_private = 7;
+  repeated string tags = 8;
+}
+
+message CreatePostRequest {
+  string title = 1;
+  string description = 2;
+  bool is_private = 3;
+  repeated string tags = 4;
+}
+
+message PostResponse {
+  Post post = 1;
+}
+
+message GetPostRequest {
+  string post_id = 1;
+}
+
+message UpdatePostRequest {
+  string post_id = 1;
+  string title = 2;
+  string description = 3;
+  bool is_private = 4;
+  repeated string tags = 5;
+}
+
+message DeletePostRequest {
+  string post_id = 1;
+}
+
+message ListMyPostsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListPublicPostsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  optional string user_id = 3;
+}
+
+message ListPostsResponse {
+  repeated Post posts = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}

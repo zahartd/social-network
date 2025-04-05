@@ -159,6 +159,184 @@ paths:
           description: "Invalid identifier supplied"
         "404":
           description: "User not found"
+  /posts:
+    post:
+      tags:
+        - posts
+      summary: "Create Post"
+      description: "Creates a new post for the authenticated user."
+      operationId: "createPost"
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: "Post content"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreate"
+      responses:
+        "201":
+          description: "Post created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          description: "Invalid request body"
+        "401":
+          description: "Unauthorized (invalid or missing token)"
+        "500":
+           description: "Internal server error or Post service error"
+  /posts/my:
+    get:
+      tags:
+        - posts
+      summary: "List My Posts"
+      description: "Retrieves a paginated list of posts created by the authenticated user."
+      operationId: "listMyPosts"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: "Page number (default 1)"
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: "Number of posts per page (default 10, max 100)"
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        "200":
+          description: "List of user's posts"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostListResponse"
+        "401":
+          description: "Unauthorized"
+        "500":
+           description: "Internal server error or Post service error"
+  /posts/{postID}:
+    get:
+      tags:
+        - posts
+      summary: "Get Post by ID"
+      description: "Retrieves a specific post by its ID. Access might be restricted for private posts."
+      operationId: "getPostById"
+      security:
+        - BearerAuth: [] # Требуется для проверки приватности
+      parameters:
+        - name: postID
+          in: path
+          description: "UUID of the post to retrieve"
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Post details"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "401":
+          description: "Unauthorized (invalid or missing token)"
+        "403":
+          description: "Forbidden (access to private post denied)"
+        "404":
+          description: "Post not found"
+        "500":
+           description: "Internal server error or Post service error"
+    put:
+      tags:
+        - posts
+      summary: "Update Post"
+      description: "Updates a post owned by the authenticated user."
+      operationId: "updatePost"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postID
+          in: path
+          description: "UUID of the post to update"
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: "Updated post content"
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        "200":
+          description: "Post updated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "400":
+          description: "Invalid request body or post ID"
+        "401":
+          description: "Unauthorized"
+        "403":
+          description: "Forbidden (user does not own the post)"
+        "404":
+          description: "Post not found"
+        "500":
+           description: "Internal server error or Post service error"
+    delete:
+      tags:
+        - posts
+      summary: "Delete Post"
+      description: "Deletes a post owned by the authenticated user."
+      operationId: "deletePost"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postID
+          in: path
+          description: "UUID of the post to delete"
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: "Post deleted successfully"
+          content:
+             application/json:
+               schema:
+                 type: object
+                 properties:
+                   message:
+                     type: string
+                     example: "Post deleted successfully"
+        # "204": # No Content - тоже хороший вариант для DELETE
+        #   description: "Post deleted successfully"
+        "401":
+          description: "Unauthorized"
+        "403":
+          description: "Forbidden (user does not own the post)"
+        "404":
+          description: "Post not found"
+        "500":
+           description: "Internal server error or Post service error"
 components:
   securitySchemes:
     BearerAuth:
@@ -244,3 +422,100 @@ components:
           type: string
         bio:
           type: string
+    PostCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: "Title of the post"
+          example: "My First Post"
+        description:
+          type: string
+          description: "Content/description of the post"
+          example: "This is the content of my first post."
+        is_private:
+          type: boolean
+          description: "If true, only the creator can view the post"
+          default: false
+        tags:
+          type: array
+          items:
+            type: string
+          description: "List of tags associated with the post"
+          example: ["introduction", "golang"]
+      required:
+        - title
+    PostUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: "Updated title of the post"
+          example: "My Updated Post Title"
+        description:
+          type: string
+          description: "Updated content/description of the post"
+          example: "Updated content."
+        is_private:
+          type: boolean
+          description: "Updated privacy flag"
+        tags:
+          type: array
+          items:
+            type: string
+          description: "Updated list of tags"
+          example: ["update", "golang", "testing"]
+      required:
+         - title # Сделать обязательными те поля, которые нельзя удалять
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Unique identifier for the post"
+        user_id:
+          type: string
+          format: uuid
+          description: "Identifier of the user who created the post"
+        title:
+          type: string
+          description: "Title of the post"
+        description:
+          type: string
+          description: "Content/description of the post"
+        created_at:
+          type: string
+          format: date-time
+          description: "Timestamp when the post was created"
+        updated_at:
+          type: string
+          format: date-time
+          description: "Timestamp when the post was last updated"
+        is_private:
+          type: boolean
+          description: "Privacy status of the post"
+        tags:
+          type: array
+          items:
+            type: string
+          description: "List of tags"
+    PostListResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        total_count:
+          type: integer
+          format: int32
+          description: "Total number of posts for the user"
+        page:
+          type: integer
+          format: int32
+          description: "Current page number"
+        page_size:
+          type: integer
+          format: int32
+          description: "Number of posts per page"

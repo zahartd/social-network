@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -11,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
+	"github.com/zahartd/social-network/src/services/user-service/internal/config"
 	"github.com/zahartd/social-network/src/services/user-service/internal/handlers"
 	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
 	"github.com/zahartd/social-network/src/services/user-service/internal/service"
@@ -56,12 +56,9 @@ func initCustomValidators() {
 }
 
 func main() {
-	dsn := os.Getenv("DB_DSN")
-	if dsn == "" {
-		log.Fatal("DB_DSN not provided")
-	}
+	cfg := config.Load()
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", cfg.DB_DSN)
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
@@ -89,10 +86,5 @@ func main() {
 	protected.PUT("/:identifier", userHandler.UpdateUser)
 	protected.DELETE("/:identifier", userHandler.DeleteUser)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8081"
-	}
-	log.Printf("User Service running on port %s", port)
-	router.Run(":" + port)
+	router.Run(":" + cfg.Port)
 }

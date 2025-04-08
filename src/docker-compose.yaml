@@ -1,50 +1,123 @@
 services:
-  postgres:
-    image: postgres:latest
+  postgres-users:
+    image: postgres:15-alpine
+    container_name: postgres-users-db
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=secret
-      - POSTGRES_DB=userdb
-    # ports:
-    #   - 5432:5432
+      POSTGRES_USER: useradmin
+      POSTGRES_PASSWORD: usersecret
+      POSTGRES_DB: userdb
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_users:/var/lib/postgresql/data
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U useradmin -d userdb"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+    networks:
+      - social-net
 
-  migrate:
-    image: migrate/migrate:latest
-    command: ["-path", "/migrations", "-database", "postgres://postgres:secret@postgres:5432/userdb?sslmode=disable", "up"]
+  migrate-users:
+    image: migrate/migrate:v4.17.1
+    container_name: migrate-users
+    command: ["-path", "/migrations", "-database", "postgres://useradmin:usersecret@postgres-users:5432/userdb?sslmode=disable", "up"]
     volumes:
       - ./services/user-service/migrations:/migrations
     depends_on:
-      - postgres
+      postgres-users:
+        condition: service_healthy
+    networks:
+      - social-net
+    restart: on-failure
 
   user-service:
     build:
-      context: ./services/user-service
-    # ports:
-    #   - 8081:8081
+      context: .
+      dockerfile: ./services/user-service/Dockerfile
+    container_name: user-service
     environment:
-      - DB_DSN=postgres://postgres:secret@postgres:5432/userdb?sslmode=disable
-      - JWT_PRIVATE_KEY=/app/certs/id_rsa
-      - JWT_PUBLIC_KEY=/app/certs/id_rsa.pub
+      DB_DSN: postgres://useradmin:usersecret@postgres-users:5432/userdb?sslmode=disable
+      JWT_PRIVATE_KEY: /app/certs/id_rsa
+      JWT_PUBLIC_KEY: /app/certs/id_rsa.pub
+      SERVICE_PORT: 8081
     volumes:
       - ./certs:/app/certs:ro
     depends_on:
-      - postgres
+      migrate-users:
+         condition: service_completed_successfully
+    networks:
+      - social-net
+    restart: unless-stopped
+
+  postgres-posts:
+    image: postgres:15-alpine
+    container_name: postgres-posts-db
+    environment:
+      POSTGRES_USER: postadmin
+      POSTGRES_PASSWORD: postsecret
+      POSTGRES_DB: postdb
+    volumes:
+      - pgdata_posts:/var/lib/postgresql/data
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postadmin -d postdb"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+    networks:
+      - social-net
+
+  migrate-posts:
+    image: migrate/migrate:v4.17.1
+    container_name: migrate-posts
+    command: ["-path", "/migrations", "-database", "postgres://postadmin:postsecret@postgres-posts:5432/postdb?sslmode=disable", "up"]
+    volumes:
+      - ./services/post-service/migrations:/migrations
+    depends_on:
+       postgres-posts:
+         condition: service_healthy
+    networks:
+      - social-net
+    restart: on-failure
+
+  post-service:
+    build:
+      context: .
+      dockerfile: ./services/post-service/Dockerfile
+    container_name: post-service
+    environment:
+      DB_DSN: postgres://postadmin:postsecret@postgres-posts:5432/postdb?sslmode=disable
+      GRPC_PORT: 50051
+    depends_on:
+       migrate-posts:
+          condition: service_completed_successfully
+    networks:
+      - social-net
+    restart: unless-stopped
 
   api-gateway:
     build:
-      context: ./services/api-gateway
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
+    container_name: api-gateway
     ports:
-      - 8080:8080
+      - "8080:8080"
     environment:
-      - USER_SERVICE_URL=http://user-service:8081
-      - PORT=8080
-      - JWT_PUBLIC_KEY=/app/certs/id_rsa.pub
+      USER_SERVICE_URL: http://user-service:8081
+      POST_SERVICE_GRPC_URL: post-service:50051
+      PORT: 8080
+      JWT_PUBLIC_KEY: /app/certs/id_rsa.pub
     volumes:
       - ./certs/id_rsa.pub:/app/certs/id_rsa.pub:ro
     depends_on:
       - user-service
+      - post-service
+    networks:
+      - social-net
+    restart: unless-stopped
 
 volumes:
-  pgdata:
+  pgdata_users:
+  pgdata_posts:
+
+networks:
+  social-net:
+    driver: bridge

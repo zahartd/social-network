@@ -1,14 +1,19 @@
 erDiagram
     USER {
-        uuid user_id
+        uuid user_id PK "User identifier (from user-service)"
+        string username "User login"
+        string email "User email"
     }
     POSTS {
-        uuid post_id "Уникальный идентификатор поста"
-        uuid user_id "Идентификатор автора поста"
+        uuid id PK "Уникальный идентификатор поста"
+        uuid user_id FK "Идентификатор автора поста"
+        string title "Post title"
         string content "Содержимое поста"
         datetime created_at "Дата создания поста"
         datetime updated_at "Дата последнего обновления"
         int favorites_count "Количество лайков на посте"
+        boolean is_private "Privacy flag"
+        text[] tags "List of tags"
     }
     COMMENTS {
         uuid comment_id "Уникальный идентификатор комментария"

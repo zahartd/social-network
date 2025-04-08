@@ -1,0 +1,8 @@
+go 1.24.0
+
+use (
+	./gen/go
+	./services/api-gateway
+	./services/post-service
+	./services/user-service
+)

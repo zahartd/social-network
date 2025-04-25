@@ -2,27 +2,33 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/segmentio/kafka-go"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	postpb "github.com/zahartd/social-network/src/gen/go/post"
 	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/post-service/internal/models"
 	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
 	"github.com/zahartd/social-network/src/services/post-service/internal/utils"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type PostService struct {
-	repo repository.PostRepository
+	repo          repository.PostRepository
+	viewWriter    *kafka.Writer
+	likeWriter    *kafka.Writer
+	commentWriter *kafka.Writer
 }
 
-func NewPostService(repo repository.PostRepository) *PostService {
-	return &PostService{repo: repo}
+func NewPostService(r repository.PostRepository, vw, lw, cw *kafka.Writer) *PostService {
+	return &PostService{repo: r, viewWriter: vw, likeWriter: lw, commentWriter: cw}
 }
 
 func ToProtoPost(post *models.Post) *postpb.Post {
@@ -38,6 +44,20 @@ func ToProtoPost(post *models.Post) *postpb.Post {
 		UpdatedAt:   timestamppb.New(post.UpdatedAt),
 		IsPrivate:   post.IsPrivate,
 		Tags:        post.Tags,
+	}
+}
+
+func ToProtoComment(cm *models.Comment) *postpb.Comment {
+	if cm == nil {
+		return nil
+	}
+	return &postpb.Comment{
+		Id:              cm.ID,
+		PostId:          cm.PostID,
+		ParentCommentId: cm.ParentCommentID,
+		UserId:          cm.UserID,
+		Text:            cm.Text,
+		CreatedAt:       timestamppb.New(cm.CreatedAt),
 	}
 }
 
@@ -258,4 +278,79 @@ func (s *PostService) ListPublicPosts(ctx context.Context, req *postpb.ListPubli
 	}
 
 	return protoPosts, totalCount, nil
+}
+
+func (s *PostService) ViewPost(ctx context.Context, req *postpb.ViewPostRequest) error {
+	userID, _ := auth.GetUserIDFromContext(ctx)
+	_ = s.repo.RecordView(ctx, userID, req.PostId)
+
+	ev := map[string]interface{}{"user_id": userID, "post_id": req.PostId, "viewed_at": time.Now()}
+	b, _ := json.Marshal(ev)
+	_ = s.viewWriter.WriteMessages(ctx, kafka.Message{Key: []byte(req.PostId), Value: b})
+	return nil
+}
+
+func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest) error {
+	userID, _ := auth.GetUserIDFromContext(ctx)
+	_ = s.repo.RecordLike(ctx, userID, req.PostId)
+
+	ev := map[string]interface{}{"user_id": userID, "post_id": req.PostId, "liked_at": time.Now()}
+	b, _ := json.Marshal(ev)
+	_ = s.likeWriter.WriteMessages(ctx, kafka.Message{Key: []byte(req.PostId), Value: b})
+	return nil
+}
+
+func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequest) error {
+	userID, _ := auth.GetUserIDFromContext(ctx)
+	_ = s.repo.RemoveLike(ctx, userID, req.PostId)
+	// (можно отправлять event, если нужно)
+	return nil
+}
+
+func optionalString(s *string) *string {
+	if s == nil || *s == "" {
+		return nil
+	}
+	return s
+}
+
+func (s *PostService) AddComment(ctx context.Context, req *postpb.AddCommentRequest) (*models.Comment, error) {
+	userID, _ := auth.GetUserIDFromContext(ctx)
+	cm := &models.Comment{
+		PostID:          req.PostId,
+		ParentCommentID: optionalString(req.ParentCommentId),
+		UserID:          userID,
+		Text:            req.Text,
+	}
+	id, _ := s.repo.CreateComment(ctx, cm)
+	cm.ID = id
+
+	ev := map[string]interface{}{"user_id": userID, "post_id": req.PostId, "comment_id": id, "text": req.Text, "created_at": time.Now()}
+	b, _ := json.Marshal(ev)
+	_ = s.commentWriter.WriteMessages(ctx, kafka.Message{Key: []byte(id), Value: b})
+	return cm, nil
+}
+
+func (s *PostService) ListComments(ctx context.Context, req *postpb.ListCommentsRequest) ([]*postpb.Comment, int, error) {
+	comments, total, _ := s.repo.ListComments(ctx, req.PostId, int(req.Page), int(req.PageSize))
+	var r []*postpb.Comment
+	for _, cm := range comments {
+		r = append(r, &postpb.Comment{
+			Id: cm.ID, PostId: cm.PostID, ParentCommentId: cm.ParentCommentID, UserId: cm.UserID,
+			Text: cm.Text, CreatedAt: timestamppb.New(cm.CreatedAt),
+		})
+	}
+	return r, total, nil
+}
+
+func (s *PostService) ListReplies(ctx context.Context, req *postpb.ListRepliesRequest) ([]*postpb.Comment, error) {
+	reps, _ := s.repo.ListReplies(ctx, req.ParentCommentId)
+	var r []*postpb.Comment
+	for _, cm := range reps {
+		r = append(r, &postpb.Comment{
+			Id: cm.ID, PostId: cm.PostID, ParentCommentId: cm.ParentCommentID, UserId: cm.UserID,
+			Text: cm.Text, CreatedAt: timestamppb.New(cm.CreatedAt),
+		})
+	}
+	return r, nil
 }

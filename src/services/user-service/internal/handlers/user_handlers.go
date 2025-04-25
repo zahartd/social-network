@@ -1,10 +1,15 @@
 package handlers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/segmentio/kafka-go"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
@@ -13,11 +18,19 @@ import (
 )
 
 type UserHandler struct {
-	service service.UserService
+	service     service.UserService
+	kafkaWriter *kafka.Writer
 }
 
 func NewUserHandler(s service.UserService) *UserHandler {
-	return &UserHandler{service: s}
+	return &UserHandler{
+		service: s,
+		kafkaWriter: kafka.NewWriter(kafka.WriterConfig{
+			Brokers: []string{os.Getenv("KAFKA_BROKER_URL")},
+			Topic:   "user-registrations",
+			Async:   true,
+		}),
+	}
 }
 
 func (h *UserHandler) CreateUser(c *gin.Context) {
@@ -42,6 +55,21 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
+
+	ev := struct {
+		UserID    string    `json:"user_id"`
+		CreatedAt time.Time `json:"created_at"`
+		Email     string    `json:"email"`
+	}{
+		UserID:    user.ID,
+		CreatedAt: user.CreatedAt,
+		Email:     user.Email,
+	}
+	buf, _ := json.Marshal(ev)
+	_ = h.kafkaWriter.WriteMessages(context.Background(),
+		kafka.Message{Key: []byte(user.ID), Value: buf},
+	)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"user":  user,
 		"token": token,

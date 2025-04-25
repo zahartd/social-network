@@ -76,3 +76,33 @@ func (h *PostGRPCHandler) ListPublicPosts(ctx context.Context, req *postpb.ListP
 		PageSize:   req.GetPageSize(),
 	}, nil
 }
+
+func (h *PostGRPCHandler) ViewPost(ctx context.Context, req *postpb.ViewPostRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, h.postService.ViewPost(ctx, req)
+}
+
+func (h *PostGRPCHandler) LikePost(ctx context.Context, req *postpb.LikePostRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, h.postService.LikePost(ctx, req)
+}
+
+func (h *PostGRPCHandler) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequest) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, h.postService.UnlikePost(ctx, req)
+}
+
+func (h *PostGRPCHandler) AddComment(ctx context.Context, req *postpb.AddCommentRequest) (*postpb.CommentResponse, error) {
+	cm, err := h.postService.AddComment(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &postpb.CommentResponse{Comment: service.ToProtoComment(cm)}, nil
+}
+
+func (h *PostGRPCHandler) ListComments(ctx context.Context, req *postpb.ListCommentsRequest) (*postpb.ListCommentsResponse, error) {
+	cms, total, _ := h.postService.ListComments(ctx, req)
+	return &postpb.ListCommentsResponse{Comments: cms, TotalCount: int32(total), Page: req.Page, PageSize: req.PageSize}, nil
+}
+
+func (h *PostGRPCHandler) ListReplies(ctx context.Context, req *postpb.ListRepliesRequest) (*postpb.ListCommentsResponse, error) {
+	reps, _ := h.postService.ListReplies(ctx, req)
+	return &postpb.ListCommentsResponse{Comments: reps, TotalCount: int32(len(reps)), Page: 1, PageSize: int32(len(reps))}, nil
+}

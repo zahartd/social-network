@@ -337,6 +337,15 @@ paths:
           description: "Post not found"
         "500":
            description: "Internal server error or Post service error"
+  /posts/{postID}/view:
+    post:
+      security:
+        - bearerAuth: []
+      x-handler: ViewPost
+      parameters:
+        - name: postID; in: path; required: true; schema: {type: string}
+      responses:
+        '204': {description: No Content}
 components:
   securitySchemes:
     BearerAuth:

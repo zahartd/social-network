@@ -163,6 +163,7 @@ services:
     container_name: social_network_test
     environment:
       API_GATEWAY_URL: "http://api-gateway:8080"
+      KAFKA_BROKER_URL: kafka:9092
     volumes:
       - ./certs/id_rsa.pub:/app/certs/id_rsa.pub:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

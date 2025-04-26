@@ -135,6 +135,12 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
+	requesterID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
+	}
+
 	var user *models.User
 	if isUUID {
 		user, err = h.service.GetUserByID(id)
@@ -143,12 +149,6 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
-	}
-
-	requesterID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 		return
 	}
 

@@ -4,6 +4,8 @@ import uuid
 import pytest
 import requests
 
+from kafka_utils import wait_for_kafka
+
 LOGGER = logging.getLogger(__name__)
 
 def make_request(method, url, params=None, data=None, headers=None):
@@ -50,11 +52,38 @@ def login_user(api_gateway_url, register_user):
     assert token
     return token, register_user
 
-# --- Тесты для API пользователя ---
+@pytest.fixture
+def user_factory(api_gateway_url):
+    def _create():
+        uniq = str(uuid.uuid4())[:8]
+        user_data = {
+            "login":    f"user_{uniq}",
+            "firstname":f"First_{uniq}",
+            "surname":  f"Last_{uniq}",
+            "email":    f"user_{uniq}@example.com",
+            "password": "TestPass123"
+        }
+        resp = make_request(
+            "POST",
+            api_gateway_url + "/user",
+            headers={"Content-Type": "application/json"},
+            data=user_data
+        )
+        assert resp.status_code == 201, f"Регистрация упала: {resp.text}"
+        resp = make_request(
+            "GET",
+            api_gateway_url + "/user/login",
+            params={"login": user_data["login"], "password": user_data["password"]}
+        )
+        assert resp.status_code == 200, f"Логин не удался: {resp.text}"
+        data = resp.json()
+        token = data.get("token")
+        assert token
+        return token, user_data
+    return _create
 
 class TestUserAPI:
     def test_signup_and_login(self, api_gateway_url, unique_user):
-        # Регистрация
         url = api_gateway_url + "/user"
         resp = make_request("POST", url, data=unique_user, headers={"Content-Type": "application/json"})
         assert resp.status_code == 201, f"Ошибка регистрации: {resp.text}"
@@ -63,7 +92,6 @@ class TestUserAPI:
         assert user_data
         assert user_data.get("login") == unique_user["login"]
 
-        # Логин
         url = api_gateway_url + "/user/login"
         params = {"login": unique_user["login"], "password": unique_user["password"]}
         resp = make_request("GET", url, params=params)
@@ -74,10 +102,8 @@ class TestUserAPI:
 
     def test_duplicate_signup(self, api_gateway_url, unique_user):
         url = api_gateway_url + "/user"
-        # Первая регистрация
         resp = make_request("POST", url, data=unique_user, headers={"Content-Type": "application/json"})
         assert resp.status_code == 201
-        # Повторная регистрация должна завершиться ошибкой
         resp2 = make_request("POST", url, data=unique_user, headers={"Content-Type": "application/json"})
         assert resp2.status_code != 201, "Дублирование регистрации прошло успешно, хотя должно быть отказано"
 
@@ -86,7 +112,6 @@ class TestUserAPI:
         url = api_gateway_url + "/user/logout"
         headers = auth_headers(token)
         resp = make_request("GET", url, headers=headers)
-        # Допустим, успешный выход возвращает 200 или 204
         assert resp.status_code in [200, 204]
 
     def test_get_user_profile(self, api_gateway_url, login_user):
@@ -97,7 +122,6 @@ class TestUserAPI:
         resp = make_request("GET", url, headers=headers)
         assert resp.status_code == 200, f"Ошибка получения профиля: {resp.text}"
         profile = resp.json()
-        # Если JWT принадлежит пользователю, ожидаем полный профиль с email
         assert profile.get("email") == user_data["email"]
 
     def test_update_user_profile(self, api_gateway_url, login_user):
@@ -114,39 +138,31 @@ class TestUserAPI:
         }
         resp = make_request("PUT", url, data=update_payload, headers=headers)
         assert resp.status_code in [200, 204], f"Ошибка обновления профиля: {resp.text}"
-        # Проверка обновлённого профиля
         resp_get = make_request("GET", url, headers=auth_headers(token))
         profile = resp_get.json()
         assert profile.get("email") == update_payload["email"]
 
-    def test_delete_user(self, api_gateway_url, login_user):
-        token, user_data = login_user
-        identifier = user_data["login"]
-        url = api_gateway_url + f"/user/{identifier}"
-        headers = auth_headers(token)
-        resp = make_request("DELETE", url, headers=headers)
+    def test_delete_user(self, api_gateway_url, user_factory):
+        token1, user1 = user_factory()
+        token2, user2 = user_factory()
+        assert user1 != user2
+
+        url = api_gateway_url + f"/user/{user1["login"]}"
+        resp = make_request("DELETE", url, headers=auth_headers(token1))
         assert resp.status_code in [200, 204], f"Ошибка удаления пользователя: {resp.text}"
-        # После удаления профиль должен отсутствовать
-        # new_token, new_user_data = login_user
-        # new_identifier = new_user_data["login"]
-        # new_url = api_gateway_url + f"/user/{new_identifier}"
-        # new_headers = auth_headers(new_token)
-        # resp_get = make_request("GET", new_url, headers=new_headers)
-        # assert resp_get.status_code == 404
+
+        resp_get = make_request("GET", url, headers=auth_headers(token2))
+        assert resp_get.status_code == 404
 
     def test_get_profile_with_invalid_token(self, api_gateway_url, unique_user):
-        # Регистрируем пользователя
         url = api_gateway_url + "/user"
         resp = make_request("POST", url, data=unique_user, headers={"Content-Type": "application/json"})
         assert resp.status_code == 201
         identifier = unique_user["login"]
-        # Запрос с невалидным токеном
         url = api_gateway_url + f"/user/{identifier}"
         headers = auth_headers("invalidtoken")
         resp = make_request("GET", url, headers=headers)
         assert resp.status_code in [401, 403]
-
-# --- Тесты для API постов ---
 
 class TestPostAPI:
     @pytest.fixture
@@ -203,13 +219,11 @@ class TestPostAPI:
         headers = auth_headers(token)
         resp = make_request("DELETE", url, headers=headers)
         assert resp.status_code in [200, 204], f"Ошибка удаления поста: {resp.text}"
-        # После удаления, повторный запрос должен вернуть 404
         resp_get = make_request("GET", url, headers=headers)
         assert resp_get.status_code == 404
 
     def test_list_my_posts(self, api_gateway_url, login_user):
         token, user_data = login_user
-        # Создаём несколько постов
         for i in range(3):
             url = api_gateway_url + "/posts"
             payload = {
@@ -245,8 +259,6 @@ class TestPostAPI:
         post, token, user_data = created_post
         target_user_id = user_data["id"]
         token, user_data = login_user
-        # В качестве идентификатора используем login пользователя
-        identifier = user_data["id"]
         url = api_gateway_url + f"/posts/list/public/{target_user_id}"
         params = {"page": 1, "page_size": 4}
         headers = auth_headers(token)
@@ -254,3 +266,125 @@ class TestPostAPI:
         assert resp.status_code == 200, f"Ошибка получения публичных постов пользователя: {resp.text}"
         list_data = resp.json()
         assert "posts" in list_data
+
+class TestPostKafkaIntegration:
+    def test_user_registration_emits_event(
+        self, api_gateway_url, unique_user, kafka_consumer
+    ):
+        # Регистрируем юзера
+        resp = make_request(
+            "POST",
+            f"{api_gateway_url}/user",
+            headers={"Content-Type": "application/json"},
+            data=unique_user,
+        )
+        assert resp.status_code == 201
+        user_id = resp.json()["user"]["id"]
+
+        # Ждём событие в топике user-registrations
+        ok = wait_for_kafka(
+            kafka_consumer,
+            topic="user-registrations",
+            predicate=lambda m: user_id in m.value,
+        )
+        assert ok, "Событие user-registrations не найдено"
+
+    def test_view_post_emits_event(self, api_gateway_url, login_user, kafka_consumer):
+        token, _ = login_user
+        post_id = make_request(
+            "POST", f"{api_gateway_url}/posts",
+            headers={**auth_headers(token),"Content-Type":"application/json"},
+            data={"title":"t","description":"d","is_private":False,"tags":[]}
+        ).json()["id"]
+
+        make_request("POST", f"{api_gateway_url}/posts/{post_id}/view",
+                     headers=auth_headers(token))
+
+        # ждём сообщение в Kafka
+        ok = wait_for_kafka(
+            kafka_consumer,
+            topic="post-views",
+            predicate=lambda m: post_id in m.value
+        )
+        assert ok, "Событие post-views так и не прилетело"
+
+    def test_like_and_unlike_emits_event(self, api_gateway_url, login_user, kafka_consumer):
+        token, _ = login_user
+        post_id = make_request(
+            "POST", f"{api_gateway_url}/posts",
+            headers={**auth_headers(token),"Content-Type":"application/json"},
+            data={"title":"t","description":"d","is_private":False,"tags":[]}
+        ).json()["id"]
+
+        make_request("POST",    f"{api_gateway_url}/posts/{post_id}/like", headers=auth_headers(token))
+        make_request("DELETE",  f"{api_gateway_url}/posts/{post_id}/like", headers=auth_headers(token))
+
+        ok = wait_for_kafka(
+            kafka_consumer,
+            topic="post-likes",
+            predicate=lambda m: post_id in m.value
+        )
+        assert ok, "Событие post-likes не найдено"
+
+    def test_comment_and_list_emits_event(self, api_gateway_url, login_user, kafka_consumer):
+        token, _ = login_user
+        post_id = make_request(
+            "POST", f"{api_gateway_url}/posts",
+            headers={**auth_headers(token),"Content-Type":"application/json"},
+            data={"title":"t","description":"d","is_private":False,"tags":[]}
+        ).json()["id"]
+
+        comment_text = "hello kafka"
+        resp = make_request(
+            "POST", f"{api_gateway_url}/posts/{post_id}/comments",
+            headers={**auth_headers(token),"Content-Type":"application/json"},
+            data={"text": comment_text}
+        )
+        comment_id = resp.json()["comment"]["id"]
+
+        ok = wait_for_kafka(
+            kafka_consumer,
+            topic="post-comments",
+            predicate=lambda m: comment_id in m.value and comment_text in m.value
+        )
+        assert ok, "Событие post-comments не найдено"
+    
+    def test_replies_listing(self, api_gateway_url, login_user):
+        token, _ = login_user
+        # создаём пост + родительский комментарий
+        post_id = make_request(
+            "POST", f"{api_gateway_url}/posts",
+            headers={**auth_headers(token),"Content-Type":"application/json"},
+            data={"title":"t","description":"d","is_private":False,"tags":[]}
+        ).json()["id"]
+        parent_id = make_request(
+            "POST", f"{api_gateway_url}/posts/{post_id}/comments",
+            headers={**auth_headers(token),"Content-Type":"application/json"},
+            data={"text":"parent"}
+        ).json()["comment"]["id"]
+
+        # добавляем два ответа
+        for txt in ("r1","r2"):
+            resp = make_request(
+                "POST", f"{api_gateway_url}/posts/{post_id}/comments",
+                headers={**auth_headers(token),"Content-Type":"application/json"},
+                data={"parent_comment_id":parent_id,"text":txt}
+            )
+            assert resp.status_code == 201
+            comment = resp.json()["comment"]
+            assert "parent_comment_id" in comment
+            assert comment["parent_comment_id"] == parent_id
+
+        # проверяем ListReplies
+        resp = make_request(
+            "GET", f"{api_gateway_url}/posts/{post_id}/comments/{parent_id}/replies",
+            headers=auth_headers(token)
+        )
+        assert resp.status_code == 200
+
+        data = resp.json()
+        assert "comments" in data
+        replies_comments = data["comments"]
+        assert replies_comments
+        texts = {c["text"] for c in replies_comments}
+        assert {"r1","r2"} <= texts

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
@@ -392,9 +393,17 @@ func (h *PostHandler) AddComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-	var body struct{ ParentCommentId, Text string }
+	var body struct {
+		ParentCommentID string `json:"parent_comment_id"`
+		Text            string `json:"text"`
+	}
+
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if strings.TrimSpace(body.Text) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "text is required"})
 		return
 	}
 
@@ -406,7 +415,7 @@ func (h *PostHandler) AddComment(c *gin.Context) {
 
 	grpcReq := &postpb.AddCommentRequest{
 		PostId:          targetPostID,
-		ParentCommentId: &body.ParentCommentId,
+		ParentCommentId: &body.ParentCommentID,
 		Text:            body.Text,
 	}
 

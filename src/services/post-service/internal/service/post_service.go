@@ -284,9 +284,12 @@ func (s *PostService) ViewPost(ctx context.Context, req *postpb.ViewPostRequest)
 	userID, _ := auth.GetUserIDFromContext(ctx)
 	_ = s.repo.RecordView(ctx, userID, req.PostId)
 
-	ev := map[string]interface{}{"user_id": userID, "post_id": req.PostId, "viewed_at": time.Now()}
-	b, _ := json.Marshal(ev)
-	_ = s.viewWriter.WriteMessages(ctx, kafka.Message{Key: []byte(req.PostId), Value: b})
+	ev := map[string]any{"user_id": userID, "post_id": req.PostId, "viewed_at": time.Now().UTC()}
+	payload, _ := json.Marshal(ev)
+	_ = s.viewWriter.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(req.PostId),
+		Value: payload,
+	})
 	return nil
 }
 
@@ -308,7 +311,7 @@ func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequ
 }
 
 func optionalString(s *string) *string {
-	if s == nil || *s == "" {
+	if *s == "" {
 		return nil
 	}
 	return s
@@ -325,7 +328,7 @@ func (s *PostService) AddComment(ctx context.Context, req *postpb.AddCommentRequ
 	id, _ := s.repo.CreateComment(ctx, cm)
 	cm.ID = id
 
-	ev := map[string]interface{}{"user_id": userID, "post_id": req.PostId, "comment_id": id, "text": req.Text, "created_at": time.Now()}
+	ev := map[string]any{"user_id": userID, "post_id": req.PostId, "comment_id": id, "text": req.Text, "created_at": time.Now()}
 	b, _ := json.Marshal(ev)
 	_ = s.commentWriter.WriteMessages(ctx, kafka.Message{Key: []byte(id), Value: b})
 	return cm, nil

@@ -21,6 +21,17 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics --bootstrap-server localhost:9092 --describe       \
+          >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
     networks:
       - social-net
 
@@ -82,8 +93,10 @@ services:
     volumes:
       - ./certs:/app/certs:ro
     depends_on:
+      kafka:
+        condition: service_healthy
       migrate-users:
-         condition: service_completed_successfully
+        condition: service_completed_successfully
     networks:
       - social-net
     restart: unless-stopped
@@ -128,8 +141,10 @@ services:
       GRPC_PORT: 50051
       KAFKA_BROKER_URL: kafka:9092
     depends_on:
-       migrate-posts:
-          condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      migrate-posts:
+        condition: service_completed_successfully
     networks:
       - social-net
     restart: unless-stopped
@@ -152,6 +167,11 @@ services:
     depends_on:
       - user-service
       - post-service
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - social-net
     restart: unless-stopped
@@ -168,7 +188,10 @@ services:
       - ./certs/id_rsa.pub:/app/certs/id_rsa.pub:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - social-net
     command: ["pytest", "--maxfail=1", "--disable-warnings", "-q"]

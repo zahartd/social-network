@@ -7,4 +7,5 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . .
 
-CMD ["pytest", "--maxfail=1", "--disable-warnings", "-q"]
+ENV PYTHONPATH=/app
+CMD ["pytest", "-vv", "-ra", "-s"]

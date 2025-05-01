@@ -271,7 +271,6 @@ class TestPostKafkaIntegration:
     def test_user_registration_emits_event(
         self, api_gateway_url, unique_user, kafka_consumer
     ):
-        # Регистрируем юзера
         resp = make_request(
             "POST",
             f"{api_gateway_url}/user",
@@ -281,7 +280,6 @@ class TestPostKafkaIntegration:
         assert resp.status_code == 201
         user_id = resp.json()["user"]["id"]
 
-        # Ждём событие в топике user-registrations
         ok = wait_for_kafka(
             kafka_consumer,
             topic="user-registrations",
@@ -300,7 +298,6 @@ class TestPostKafkaIntegration:
         make_request("POST", f"{api_gateway_url}/posts/{post_id}/view",
                      headers=auth_headers(token))
 
-        # ждём сообщение в Kafka
         ok = wait_for_kafka(
             kafka_consumer,
             topic="post-views",
@@ -351,7 +348,7 @@ class TestPostKafkaIntegration:
     
     def test_replies_listing(self, api_gateway_url, login_user):
         token, _ = login_user
-        # создаём пост + родительский комментарий
+
         post_id = make_request(
             "POST", f"{api_gateway_url}/posts",
             headers={**auth_headers(token),"Content-Type":"application/json"},
@@ -363,7 +360,6 @@ class TestPostKafkaIntegration:
             data={"text":"parent"}
         ).json()["comment"]["id"]
 
-        # добавляем два ответа
         for txt in ("r1","r2"):
             resp = make_request(
                 "POST", f"{api_gateway_url}/posts/{post_id}/comments",
@@ -375,7 +371,6 @@ class TestPostKafkaIntegration:
             assert "parent_comment_id" in comment
             assert comment["parent_comment_id"] == parent_id
 
-        # проверяем ListReplies
         resp = make_request(
             "GET", f"{api_gateway_url}/posts/{post_id}/comments/{parent_id}/replies",
             headers=auth_headers(token)

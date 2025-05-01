@@ -1,0 +1,27 @@
+{
+    "namespace": "com.example.events",
+    "type": "record",
+    "name": "AddedCommentEvent",
+    "fields": [
+      {
+        "name": "user_id",
+        "type": "string"
+      },
+      {
+        "name": "post_id",
+        "type": "string"
+      },
+      {
+        "name": "comment_id",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": {
+          "type": "long",
+          "logicalType": "timestamp-millis"
+        }
+      }
+    ]
+}
+  

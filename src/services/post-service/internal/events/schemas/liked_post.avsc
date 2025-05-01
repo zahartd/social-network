@@ -1,0 +1,23 @@
+{
+    "namespace": "com.example.events",
+    "type": "record",
+    "name": "LikedPostEvent",
+    "fields": [
+      {
+        "name": "user_id",
+        "type": "string"
+      },
+      {
+        "name": "post_id",
+        "type": "string"
+      },
+      {
+        "name": "liked_at",
+        "type": {
+          "type": "long",
+          "logicalType": "timestamp-millis"
+        }
+      }
+    ]
+}
+  

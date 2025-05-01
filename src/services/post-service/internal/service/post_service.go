@@ -2,33 +2,31 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	postpb "github.com/zahartd/social-network/src/gen/go/post"
 	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
+	"github.com/zahartd/social-network/src/services/post-service/internal/events"
 	"github.com/zahartd/social-network/src/services/post-service/internal/models"
 	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
 	"github.com/zahartd/social-network/src/services/post-service/internal/utils"
 )
 
 type PostService struct {
-	repo          repository.PostRepository
-	viewWriter    *kafka.Writer
-	likeWriter    *kafka.Writer
-	commentWriter *kafka.Writer
+	repo           repository.PostRepository
+	eventPublisher events.KafkaPublisher
 }
 
-func NewPostService(r repository.PostRepository, vw, lw, cw *kafka.Writer) *PostService {
-	return &PostService{repo: r, viewWriter: vw, likeWriter: lw, commentWriter: cw}
+func NewPostService(r repository.PostRepository, pub events.KafkaPublisher) *PostService {
+	return &PostService{repo: r, eventPublisher: pub}
 }
 
 func ToProtoPost(post *models.Post) *postpb.Post {
@@ -284,12 +282,16 @@ func (s *PostService) ViewPost(ctx context.Context, req *postpb.ViewPostRequest)
 	userID, _ := auth.GetUserIDFromContext(ctx)
 	_ = s.repo.RecordView(ctx, userID, req.PostId)
 
-	ev := map[string]any{"user_id": userID, "post_id": req.PostId, "viewed_at": time.Now().UTC()}
-	payload, _ := json.Marshal(ev)
-	_ = s.viewWriter.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(req.PostId),
-		Value: payload,
-	})
+	ev := events.ViewedPostEvent{
+		UserID:   userID,
+		PostID:   req.PostId,
+		ViewedAt: time.Now().UTC(),
+	}
+
+	err := s.eventPublisher.WriteViewedPost(ctx, ev)
+	if err != nil {
+		log.Printf("failed to produce event to Kafka: %s", err.Error())
+	}
 	return nil
 }
 
@@ -297,16 +299,21 @@ func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest)
 	userID, _ := auth.GetUserIDFromContext(ctx)
 	_ = s.repo.RecordLike(ctx, userID, req.PostId)
 
-	ev := map[string]interface{}{"user_id": userID, "post_id": req.PostId, "liked_at": time.Now()}
-	b, _ := json.Marshal(ev)
-	_ = s.likeWriter.WriteMessages(ctx, kafka.Message{Key: []byte(req.PostId), Value: b})
+	ev := events.LikedPostEvent{
+		UserID:  userID,
+		PostID:  req.PostId,
+		LikedAt: time.Now().UTC(),
+	}
+	err := s.eventPublisher.WriteLikedPost(ctx, ev)
+	if err != nil {
+		log.Printf("failed to produce event to Kafka: %s", err.Error())
+	}
 	return nil
 }
 
 func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequest) error {
 	userID, _ := auth.GetUserIDFromContext(ctx)
 	_ = s.repo.RemoveLike(ctx, userID, req.PostId)
-	// (можно отправлять event, если нужно)
 	return nil
 }
 
@@ -328,9 +335,17 @@ func (s *PostService) AddComment(ctx context.Context, req *postpb.AddCommentRequ
 	id, _ := s.repo.CreateComment(ctx, cm)
 	cm.ID = id
 
-	ev := map[string]any{"user_id": userID, "post_id": req.PostId, "comment_id": id, "text": req.Text, "created_at": time.Now()}
-	b, _ := json.Marshal(ev)
-	_ = s.commentWriter.WriteMessages(ctx, kafka.Message{Key: []byte(id), Value: b})
+	ev := events.AddedCommentEvent{
+		UserID:    userID,
+		PostID:    req.PostId,
+		CommentID: id,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	err := s.eventPublisher.WriteAddedComment(ctx, ev)
+	if err != nil {
+		log.Printf("failed to produce event to Kafka: %s", err.Error())
+	}
 	return cm, nil
 }
 

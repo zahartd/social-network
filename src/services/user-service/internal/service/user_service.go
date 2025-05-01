@@ -1,19 +1,17 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/segmentio/kafka-go"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
+	"github.com/zahartd/social-network/src/services/user-service/internal/events"
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
 )
@@ -28,20 +26,24 @@ type UserService interface {
 }
 
 type userService struct {
-	repo        repository.UserRepository
-	sessionRepo repository.SessionRepository
-	kafkaWriter *kafka.Writer
+	repo            repository.UserRepository
+	sessionRepo     repository.SessionRepository
+	eventsPublisher events.KafkaPublisher
 }
 
 func NewUserService(repo repository.UserRepository, sessionRepo repository.SessionRepository) UserService {
+	pub, err := events.NewKafkaPublisherJSON(
+		[]string{os.Getenv("KAFKA_BROKER_URL")},
+		// os.Getenv("KAFKA_SCHEMA_REGISTRY_URL"),
+	)
+	if err != nil {
+		log.Fatalf("failed to create events Kafka publisher: %s", err.Error())
+	}
+
 	return &userService{
-		repo:        repo,
-		sessionRepo: sessionRepo,
-		kafkaWriter: kafka.NewWriter(kafka.WriterConfig{
-			Brokers: []string{os.Getenv("KAFKA_BROKER_URL")},
-			Topic:   "user-registrations",
-			Async:   true,
-		}),
+		repo:            repo,
+		sessionRepo:     sessionRepo,
+		eventsPublisher: pub,
 	}
 }
 
@@ -72,18 +74,13 @@ func (s *userService) CreateUser(c *gin.Context, login, firstname, surname, emai
 		return nil, "", errors.New("failed to generate token")
 	}
 
-	ev := struct {
-		UserID    string    `json:"user_id"`
-		CreatedAt time.Time `json:"created_at"`
-		Email     string    `json:"email"`
-	}{
+	ev := events.UserRegistered{
 		UserID:    user.ID,
-		CreatedAt: user.CreatedAt,
 		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
 	}
-	buf, _ := json.Marshal(ev)
-	msg := kafka.Message{Key: []byte(user.ID), Value: buf}
-	err = s.kafkaWriter.WriteMessages(c, msg)
+
+	err = s.eventsPublisher.WriteUserRegistered(c, ev)
 	if err != nil {
 		log.Printf("failed to produce event to Kafka: %s", err.Error())
 	}

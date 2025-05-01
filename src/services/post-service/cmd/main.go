@@ -16,6 +16,7 @@ import (
 	postpb "github.com/zahartd/social-network/src/gen/go/post"
 	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/post-service/internal/config"
+	"github.com/zahartd/social-network/src/services/post-service/internal/events"
 	"github.com/zahartd/social-network/src/services/post-service/internal/handlers"
 	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
 	"github.com/zahartd/social-network/src/services/post-service/internal/service"
@@ -35,8 +36,12 @@ func main() {
 	viewWriter := kafka.NewWriter(kafka.WriterConfig{Brokers: []string{cfg.KafkaBrokerURL}, Topic: "post-views", Async: true})
 	likeWriter := kafka.NewWriter(kafka.WriterConfig{Brokers: []string{cfg.KafkaBrokerURL}, Topic: "post-likes", Async: true})
 	commentWriter := kafka.NewWriter(kafka.WriterConfig{Brokers: []string{cfg.KafkaBrokerURL}, Topic: "post-comments", Async: true})
+	eventsPublisher := events.NewKafkaPublisherJSON()
+	eventsPublisher = events.WithWriter(eventsPublisher, viewWriter)
+	eventsPublisher = events.WithWriter(eventsPublisher, likeWriter)
+	eventsPublisher = events.WithWriter(eventsPublisher, commentWriter)
 
-	postService := service.NewPostService(postRepo, viewWriter, likeWriter, commentWriter)
+	postService := service.NewPostService(postRepo, eventsPublisher)
 	postHandler := handlers.NewPostGRPCHandler(postService)
 
 	grpcServer := grpc.NewServer(

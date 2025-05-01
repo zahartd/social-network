@@ -1,0 +1,22 @@
+{
+  "type"      : "record",
+  "name"      : "UserRegistered",
+  "namespace" : "com.example.users",
+  "fields" : [
+    {
+        "name": "user_id",
+        "type": "string"
+    },
+    {
+        "name": "email",
+        "type": "string"
+    },
+    {
+        "name": "created_at",
+        "type": {
+             "type": "long",
+             "logicalType": "timestamp-millis"
+        }
+    }
+  ]
+}

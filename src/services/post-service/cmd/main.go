@@ -32,9 +32,39 @@ func main() {
 
 	postRepo := repository.NewPostgresPostRepository(db)
 
-	viewWriter := kafka.NewWriter(kafka.WriterConfig{Brokers: []string{cfg.KafkaBrokerURL}, Topic: "post-views", Async: true})
-	likeWriter := kafka.NewWriter(kafka.WriterConfig{Brokers: []string{cfg.KafkaBrokerURL}, Topic: "post-likes", Async: true})
-	commentWriter := kafka.NewWriter(kafka.WriterConfig{Brokers: []string{cfg.KafkaBrokerURL}, Topic: "post-comments", Async: true})
+	viewWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-views",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := viewWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
+	likeWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-likes",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := likeWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
+	commentWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-comments",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := commentWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
 
 	postService := service.NewPostService(postRepo, viewWriter, likeWriter, commentWriter)
 	postHandler := handlers.NewPostGRPCHandler(postService)

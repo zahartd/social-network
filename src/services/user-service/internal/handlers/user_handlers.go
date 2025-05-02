@@ -1,15 +1,9 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/segmentio/kafka-go"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
@@ -18,18 +12,12 @@ import (
 )
 
 type UserHandler struct {
-	service     service.UserService
-	kafkaWriter *kafka.Writer
+	service service.UserService
 }
 
 func NewUserHandler(s service.UserService) *UserHandler {
 	return &UserHandler{
 		service: s,
-		kafkaWriter: kafka.NewWriter(kafka.WriterConfig{
-			Brokers: []string{os.Getenv("KAFKA_BROKER_URL")},
-			Topic:   "user-registrations",
-			Async:   true,
-		}),
 	}
 }
 
@@ -45,30 +33,11 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	user, err := h.service.CreateUser(req.Login, req.Firstname, req.Surname, req.Email, req.Password)
+	user, token, err := h.service.CreateUser(c, req.Login, req.Firstname, req.Surname, req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	token, err := auth.GenerateToken(user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-
-	ev := struct {
-		UserID    string    `json:"user_id"`
-		CreatedAt time.Time `json:"created_at"`
-		Email     string    `json:"email"`
-	}{
-		UserID:    user.ID,
-		CreatedAt: user.CreatedAt,
-		Email:     user.Email,
-	}
-	buf, _ := json.Marshal(ev)
-	_ = h.kafkaWriter.WriteMessages(context.Background(),
-		kafka.Message{Key: []byte(user.ID), Value: buf},
-	)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"user":  user,
@@ -95,19 +64,9 @@ func (h *UserHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "password is incorrect"})
 		return
 	}
-
-	user, _, err := h.service.Login(login, password)
+	token, err := h.service.Login(c, login, password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	token, err := auth.GenerateToken(user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-	if err := auth.CreateSession(user, token, c.ClientIP()); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Errorf("failed to create session: %w", err).Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"token": token})
@@ -119,9 +78,8 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing token"})
 		return
 	}
-	token = auth.TrimBearerPrefix(token)
-	if err := auth.DeleteSession(token); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete session"})
+	if err := h.service.Logout(c, token); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "User logged out successfully"})
@@ -143,9 +101,9 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	var user *models.User
 	if isUUID {
-		user, err = h.service.GetUserByID(id)
+		user, err = h.service.GetUserByID(c, id)
 	} else {
-		user, err = h.service.GetUserByLogin(id)
+		user, err = h.service.GetUserByLogin(c, id)
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -176,9 +134,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	var user *models.User
 	if isUUID {
-		user, err = h.service.GetUserByID(id)
+		user, err = h.service.GetUserByID(c, id)
 	} else {
-		user, err = h.service.GetUserByLogin(id)
+		user, err = h.service.GetUserByLogin(c, id)
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -202,7 +160,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updatedUser, err := h.service.UpdateUser(user.ID, req.Email, req.Firstname, req.Surname, req.Phone, req.Bio, user.ID)
+	updatedUser, err := h.service.UpdateUser(c, user.ID, req.Email, req.Firstname, req.Surname, req.Phone, req.Bio, user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -220,9 +178,9 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 
 	var user *models.User
 	if isUUID {
-		user, err = h.service.GetUserByID(id)
+		user, err = h.service.GetUserByID(c, id)
 	} else {
-		user, err = h.service.GetUserByLogin(id)
+		user, err = h.service.GetUserByLogin(c, id)
 	}
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -242,7 +200,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 	token = auth.TrimBearerPrefix(token)
 
-	if err := h.service.DeleteUser(user.ID, token); err != nil {
+	if err := h.service.DeleteUser(c, user.ID, token); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

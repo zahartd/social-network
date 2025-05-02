@@ -1,0 +1,4 @@
+pytest
+requests
+kafka-python
+pytest-asyncio >= 0.21

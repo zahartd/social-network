@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	_ "github.com/lib/pq"
+	"github.com/segmentio/kafka-go"
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/config"
@@ -67,7 +68,18 @@ func main() {
 	userRepo := repository.NewPostgresUserRepo(db)
 	sessionRepo := repository.NewPostgresSessionRepo(db)
 	auth.SetSessionRepo(sessionRepo)
-	userService := service.NewUserService(userRepo, sessionRepo)
+	registrationsWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "user-registrations",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := registrationsWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
+	userService := service.NewUserService(userRepo, sessionRepo, registrationsWriter)
 	userHandler := handlers.NewUserHandler(userService)
 
 	auth.InitJWT()

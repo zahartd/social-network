@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	Port   string
-	DB_DSN string
+	Port           string
+	DB_DSN         string
+	KafkaBrokerURL string
 }
 
 func Load() *Config {
@@ -22,7 +23,8 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port:   port,
-		DB_DSN: dbDSN,
+		Port:           port,
+		DB_DSN:         dbDSN,
+		KafkaBrokerURL: os.Getenv("KAFKA_BROKER_URL"),
 	}
 }

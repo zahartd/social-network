@@ -1,4 +1,55 @@
 services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - social-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics --bootstrap-server localhost:9092 --describe       \
+          >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    networks:
+      - social-net
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - social-net
+
   postgres-users:
     image: postgres:15-alpine
     container_name: postgres-users-db
@@ -39,11 +90,14 @@ services:
       JWT_PRIVATE_KEY: /app/certs/id_rsa
       JWT_PUBLIC_KEY: /app/certs/id_rsa.pub
       SERVICE_PORT: 8081
+      KAFKA_BROKER_URL: kafka:9092
     volumes:
       - ./certs:/app/certs:ro
     depends_on:
+      kafka:
+        condition: service_healthy
       migrate-users:
-         condition: service_completed_successfully
+        condition: service_completed_successfully
     networks:
       - social-net
     restart: unless-stopped
@@ -86,9 +140,12 @@ services:
     environment:
       DB_DSN: postgres://postadmin:postsecret@postgres-posts:5432/postdb?sslmode=disable
       GRPC_PORT: 50051
+      KAFKA_BROKER_URL: kafka:9092
     depends_on:
-       migrate-posts:
-          condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      migrate-posts:
+        condition: service_completed_successfully
     networks:
       - social-net
     restart: unless-stopped
@@ -105,14 +162,41 @@ services:
       POST_SERVICE_GRPC_URL: post-service:50051
       PORT: 8080
       JWT_PUBLIC_KEY: /app/certs/id_rsa.pub
+      KAFKA_BROKER_URL: kafka:9092
     volumes:
       - ./certs/id_rsa.pub:/app/certs/id_rsa.pub:ro
     depends_on:
       - user-service
       - post-service
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - social-net
     restart: unless-stopped
+
+  test:
+    build:
+      context: ./tests
+      dockerfile: Dockerfile
+    container_name: social_network_test
+    environment:
+      API_GATEWAY_URL: "http://api-gateway:8080"
+      KAFKA_BROKER_URL: kafka:9092
+    volumes:
+      - ./certs/id_rsa.pub:/app/certs/id_rsa.pub:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - social-net
+    command: ["pytest", "--maxfail=1", "--disable-warnings", "-q"]
+    restart: "no"
 
 volumes:
   pgdata_users:

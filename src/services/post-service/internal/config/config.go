@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	GRPCPort string
-	DB_DSN   string
+	GRPCPort       string
+	DB_DSN         string
+	KafkaBrokerURL string
 }
 
 func Load() *Config {
@@ -22,7 +23,8 @@ func Load() *Config {
 	}
 
 	return &Config{
-		GRPCPort: port,
-		DB_DSN:   dbDSN,
+		GRPCPort:       port,
+		DB_DSN:         dbDSN,
+		KafkaBrokerURL: os.Getenv("KAFKA_BROKER_URL"),
 	}
 }

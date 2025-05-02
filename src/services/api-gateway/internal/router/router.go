@@ -39,6 +39,13 @@ func SetupRouter(postClient postpb.PostServiceClient, userServiceURL *url.URL) *
 		postProtected.GET("/list/my", postHandlers.GetMyPosts)
 		postProtected.GET("/list/public", postHandlers.GetAllPublicPosts)
 		postProtected.GET("/list/public/:userID", postHandlers.GetUserPublicPosts)
+		postProtected.POST("/:postID/view", postHandlers.ViewPost)
+		postProtected.POST("/:postID/like", postHandlers.LikePost)
+		postProtected.DELETE("/:postID/like", postHandlers.UnlikePost)
+		postProtected.GET("/:postID/comments", postHandlers.ListComments)
+		postProtected.POST("/:postID/comments", postHandlers.AddComment)
+		postProtected.POST("/:postID/comments/:commentID/replies", postHandlers.AddReply)
+		postProtected.GET("/:postID/comments/:commentID/replies", postHandlers.ListReplies)
 	}
 
 	router.GET("/ping", func(c *gin.Context) {

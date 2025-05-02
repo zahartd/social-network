@@ -9,6 +9,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -30,7 +31,42 @@ func main() {
 	defer db.Close()
 
 	postRepo := repository.NewPostgresPostRepository(db)
-	postService := service.NewPostService(postRepo)
+
+	viewWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-views",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := viewWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
+	likeWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-likes",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := likeWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
+	commentWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-comments",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := commentWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
+
+	postService := service.NewPostService(postRepo, viewWriter, likeWriter, commentWriter)
 	postHandler := handlers.NewPostGRPCHandler(postService)
 
 	grpcServer := grpc.NewServer(

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
@@ -287,6 +288,250 @@ func (h *PostHandler) GetUserPublicPosts(c *gin.Context) {
 	}
 
 	res, err := h.postClient.ListPublicPosts(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *PostHandler) ViewPost(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.ViewPostRequest{
+		PostId: targetPostID,
+	}
+
+	_, err = h.postClient.ViewPost(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *PostHandler) LikePost(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.LikePostRequest{
+		PostId: targetPostID,
+	}
+
+	_, err = h.postClient.LikePost(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *PostHandler) UnlikePost(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.UnlikePostRequest{
+		PostId: targetPostID,
+	}
+
+	_, err = h.postClient.UnlikePost(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *PostHandler) AddComment(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	var body struct {
+		Text string `json:"text"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if strings.TrimSpace(body.Text) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "text is required"})
+		return
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.AddCommentRequest{
+		PostId: targetPostID,
+		Text:   body.Text,
+	}
+
+	cm, err := h.postClient.AddComment(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, cm)
+}
+
+func (h *PostHandler) AddReply(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	parentCommentID := c.Param("commentID")
+	if parentCommentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parent comment ID parameter (:commentID) is required"})
+		return
+	}
+	err = utils.ValidateCommentID(parentCommentID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	var body struct {
+		Text string `json:"text"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if strings.TrimSpace(body.Text) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "text is required"})
+		return
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.AddReplyRequest{
+		PostId:          targetPostID,
+		ParentCommentId: parentCommentID,
+		Text:            body.Text,
+	}
+
+	cm, err := h.postClient.AddReply(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, cm)
+}
+
+func (h *PostHandler) ListComments(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	page, size, _ := parsePagination(c)
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.ListCommentsRequest{
+		PostId:   targetPostID,
+		Page:     int32(page),
+		PageSize: int32(size),
+	}
+
+	res, err := h.postClient.ListComments(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *PostHandler) ListReplies(c *gin.Context) {
+	targetCommentID := c.Param("commentID")
+	if targetCommentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Comment ID parameter (:commentID) is required"})
+		return
+	}
+	err := utils.ValidateCommentID(targetCommentID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.ListRepliesRequest{
+		ParentCommentId: targetCommentID,
+	}
+
+	res, err := h.postClient.ListReplies(ctx, grpcReq)
 	if err != nil {
 		MapGrpcError(c, err)
 		return

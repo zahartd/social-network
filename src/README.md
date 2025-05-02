@@ -115,12 +115,69 @@ curl -X GET 'http://localhost:8080/posts/list/public?page=1&page_size=15' \
 curl -X GET "http://localhost:8080/posts/list/public/${USER_ID}?page=1&page_size=4" \
   -H "Authorization: Bearer $JWT_TOKEN"
 ```
-
-## Сборка и запуск
+## Mark post as viewed
 
 ```bash
-protoc --proto_path=src/proto --go_out=src/gen/go --go_opt=paths=source_relative --go-grpc_out=src/gen/go --go-grpc_opt=paths=source_relative src/proto/post/post.proto
-docker-compose down --rmi all --volumes --remove-orphans
+curl -X POST http://localhost:8080/posts/$POST_ID/view \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Like / unlike a post
+
+```bash
+# like
+curl -X POST http://localhost:8080/posts/$POST_ID/like \
+  -H "Authorization: Bearer $JWT_TOKEN"
+
+# unlike
+curl -X DELETE http://localhost:8080/posts/$POST_ID/like \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Add a comment
+
+```bash
+curl -X POST http://localhost:8080/posts/$POST_ID/comments \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"First comment"}'
+```
+
+## Add a reply to a comment
+
+```bash
+curl -X POST http://localhost:8080/posts/$POST_ID/comments \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "parent_comment_id": "'"$PARENT_COMMENT_ID"'",
+        "text": "Thanks for the feedback!"
+      }'
+```
+
+## List top-level comments
+
+```bash
+curl -X GET 'http://localhost:8080/posts/$POST_ID/comments?page=1&page_size=10' \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## List replies for a comment
+
+```bash
+curl -X GET http://localhost:8080/posts/$POST_ID/comments/$PARENT_COMMENT_ID/replies \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+## Kafka events
+
+Enjoy the API and keep an eye on Kafka topics at http://localhost:8082
+
+## Build and run
+
+```bash
+protoc --proto_path=proto --go_out=gen/go --go_opt=paths=source_relative --go-grpc_out=gen/go --go-grpc_opt=paths=source_relative proto/post/post.proto
+docker compose down --rmi all --volumes --remove-orphans
 docker compose up --build
 docker compose up migrate
 docker system prune -af --volumes

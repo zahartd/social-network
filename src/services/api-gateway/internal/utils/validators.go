@@ -10,10 +10,11 @@ import (
 )
 
 var (
-	ErrInvalidUserID   = status.Error(codes.Internal, "internal error: invalid user ID format in context")
-	ErrInvalidPage     = fmt.Errorf("page must be a positive integer")
-	ErrInvalidPageSize = fmt.Errorf("page_size must be a positive integer")
-	ErrInvalidPostID   = status.Error(codes.Internal, "internal error: invalid post ID format")
+	ErrInvalidUserID    = status.Error(codes.Internal, "internal error: invalid user ID format in context")
+	ErrInvalidPage      = fmt.Errorf("page must be a positive integer")
+	ErrInvalidPageSize  = fmt.Errorf("page_size must be a positive integer")
+	ErrInvalidPostID    = status.Error(codes.Internal, "internal error: invalid post ID format")
+	ErrInvalidCommentID = status.Error(codes.Internal, "internal error: invalid comment ID format")
 )
 
 func ValidateUserID(userIDValue any) error {
@@ -52,6 +53,18 @@ func ValidatePostID(postIDValue any) error {
 	_, err := uuid.Parse(postID)
 	if err != nil {
 		return ErrInvalidPostID
+	}
+	return err
+}
+
+func ValidateCommentID(commentIDValue any) error {
+	CommentID, ok := commentIDValue.(string)
+	if !ok || CommentID == "" {
+		return ErrInvalidCommentID
+	}
+	_, err := uuid.Parse(CommentID)
+	if err != nil {
+		return ErrInvalidCommentID
 	}
 	return err
 }

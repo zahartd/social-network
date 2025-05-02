@@ -21,6 +21,13 @@ type PostRepository interface {
 	GetUserPosts(ctx context.Context, userID string, page, pageSize int) ([]models.Post, int, error)
 	GetPublicPosts(ctx context.Context, filterUserID *string, page, pageSize int) ([]models.Post, int, error)
 	GetPostAuthorID(ctx context.Context, postID string) (string, error)
+	RecordView(ctx context.Context, userID, postID string) error
+	RecordLike(ctx context.Context, userID, postID string) error
+	RemoveLike(ctx context.Context, userID, postID string) error
+	CreateComment(ctx context.Context, cm *models.Comment) (string, error)
+	CreateReply(ctx context.Context, rp *models.Reply) (string, error)
+	ListComments(ctx context.Context, postID string, page, pageSize int) ([]models.Comment, int, error)
+	ListReplies(ctx context.Context, parentCommentID string) ([]models.Reply, error)
 }
 
 type postgresPostRepository struct {
@@ -167,4 +174,86 @@ func (r *postgresPostRepository) GetPublicPosts(ctx context.Context, filterUserI
 		return nil, 0, fmt.Errorf("database count query error: %w", err)
 	}
 	return posts, totalCount, nil
+}
+
+func (r *postgresPostRepository) RecordView(ctx context.Context, userID, postID string) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO post_views (user_id, post_id) VALUES ($1,$2)`, userID, postID)
+	return err
+}
+
+func (r *postgresPostRepository) RecordLike(ctx context.Context, userID, postID string) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO post_likes (user_id, post_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, userID, postID)
+	return err
+}
+
+func (r *postgresPostRepository) RemoveLike(ctx context.Context, userID, postID string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM post_likes WHERE user_id=$1 AND post_id=$2`, userID, postID)
+	return err
+}
+
+func (r *postgresPostRepository) CreateComment(ctx context.Context, cm *models.Comment) (string, error) {
+	query := `INSERT INTO comments (post_id, user_id, text) VALUES ($1,$2,$3) RETURNING id`
+	var id string
+	err := r.db.QueryRowContext(ctx, query, cm.PostID, cm.UserID, cm.Text).Scan(&id)
+	return id, err
+}
+
+func (r *postgresPostRepository) CreateReply(ctx context.Context, rp *models.Reply) (string, error) {
+	query := `INSERT INTO comments (post_id, parent_comment_id, user_id, text) VALUES ($1,$2,$3,$4) RETURNING id`
+	var id string
+	err := r.db.QueryRowContext(ctx, query, rp.PostID, rp.ParentCommentID, rp.UserID, rp.Text).Scan(&id)
+	return id, err
+}
+
+func (r *postgresPostRepository) ListComments(ctx context.Context, postID string, page, pageSize int) ([]models.Comment, int, error) {
+	offset := (page - 1) * pageSize
+	comments := []models.Comment{}
+	err := r.db.SelectContext(
+		ctx,
+		&comments,
+		`SELECT id, post_id, parent_comment_id, user_id, text, created_at
+		   FROM comments
+		  WHERE post_id = $1
+		    AND parent_comment_id IS NULL
+		  ORDER BY created_at DESC
+		  LIMIT $2 OFFSET $3`,
+		postID, pageSize, offset,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not list comments: %w", err)
+	}
+
+	var total int
+	err = r.db.GetContext(ctx,
+		&total,
+		`SELECT COUNT(*)
+		   FROM comments
+		  WHERE post_id = $1
+		    AND parent_comment_id IS NULL`,
+		postID,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("could not count comments: %w", err)
+	}
+
+	return comments, total, nil
+}
+
+func (r *postgresPostRepository) ListReplies(ctx context.Context, parentID string) ([]models.Reply, error) {
+	replies := []models.Reply{}
+	err := r.db.SelectContext(
+		ctx,
+		&replies,
+		`SELECT id, post_id, parent_comment_id, user_id, text, created_at
+		   FROM comments
+		  WHERE parent_comment_id = $1
+		  ORDER BY created_at`,
+		parentID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not list replies: %w", err)
+	}
+	return replies, nil
 }

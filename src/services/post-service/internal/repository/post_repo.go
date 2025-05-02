@@ -25,8 +25,9 @@ type PostRepository interface {
 	RecordLike(ctx context.Context, userID, postID string) error
 	RemoveLike(ctx context.Context, userID, postID string) error
 	CreateComment(ctx context.Context, cm *models.Comment) (string, error)
+	CreateReply(ctx context.Context, rp *models.Reply) (string, error)
 	ListComments(ctx context.Context, postID string, page, pageSize int) ([]models.Comment, int, error)
-	ListReplies(ctx context.Context, parentCommentID string) ([]models.Comment, error)
+	ListReplies(ctx context.Context, parentCommentID string) ([]models.Reply, error)
 }
 
 type postgresPostRepository struct {
@@ -193,9 +194,16 @@ func (r *postgresPostRepository) RemoveLike(ctx context.Context, userID, postID 
 }
 
 func (r *postgresPostRepository) CreateComment(ctx context.Context, cm *models.Comment) (string, error) {
+	query := `INSERT INTO comments (post_id, user_id, text) VALUES ($1,$2,$3) RETURNING id`
+	var id string
+	err := r.db.QueryRowContext(ctx, query, cm.PostID, cm.UserID, cm.Text).Scan(&id)
+	return id, err
+}
+
+func (r *postgresPostRepository) CreateReply(ctx context.Context, rp *models.Reply) (string, error) {
 	query := `INSERT INTO comments (post_id, parent_comment_id, user_id, text) VALUES ($1,$2,$3,$4) RETURNING id`
 	var id string
-	err := r.db.QueryRowContext(ctx, query, cm.PostID, cm.ParentCommentID, cm.UserID, cm.Text).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, rp.PostID, rp.ParentCommentID, rp.UserID, rp.Text).Scan(&id)
 	return id, err
 }
 
@@ -233,8 +241,8 @@ func (r *postgresPostRepository) ListComments(ctx context.Context, postID string
 	return comments, total, nil
 }
 
-func (r *postgresPostRepository) ListReplies(ctx context.Context, parentID string) ([]models.Comment, error) {
-	replies := []models.Comment{}
+func (r *postgresPostRepository) ListReplies(ctx context.Context, parentID string) ([]models.Reply, error) {
+	replies := []models.Reply{}
 	err := r.db.SelectContext(
 		ctx,
 		&replies,

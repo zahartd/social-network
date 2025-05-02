@@ -17,12 +17,12 @@ async def test_replies_listing(api_gateway_url, login_user):
 
     for txt in ("r1","r2"):
         resp = make_request(
-            "POST", f"{api_gateway_url}/posts/{post_id}/comments",
+            "POST", f"{api_gateway_url}/posts/{post_id}/comments/{parent_id}/replies",
             headers={**auth_headers(token),"Content-Type":"application/json"},
-            data={"parent_comment_id":parent_id,"text":txt}
+            data={"text":txt}
         )
         assert resp.status_code == 201
-        comment = resp.json()["comment"]
+        comment = resp.json()["reply"]
         assert "parent_comment_id" in comment
         assert comment["parent_comment_id"] == parent_id
 
@@ -33,8 +33,8 @@ async def test_replies_listing(api_gateway_url, login_user):
     assert resp.status_code == 200
 
     data = resp.json()
-    assert "comments" in data
-    replies_comments = data["comments"]
+    assert "replies" in data
+    replies_comments = data["replies"]
     assert replies_comments
     texts = {c["text"] for c in replies_comments}
     assert {"r1","r2"} <= texts

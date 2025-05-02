@@ -53,12 +53,25 @@ func ToProtoComment(cm *models.Comment) *postpb.Comment {
 		return nil
 	}
 	return &postpb.Comment{
-		Id:              cm.ID,
-		PostId:          cm.PostID,
-		ParentCommentId: cm.ParentCommentID,
-		UserId:          cm.UserID,
-		Text:            cm.Text,
-		CreatedAt:       timestamppb.New(cm.CreatedAt),
+		Id:        cm.ID,
+		PostId:    cm.PostID,
+		UserId:    cm.UserID,
+		Text:      cm.Text,
+		CreatedAt: timestamppb.New(cm.CreatedAt),
+	}
+}
+
+func ToProtoReply(rp *models.Reply) *postpb.Reply {
+	if rp == nil {
+		return nil
+	}
+	return &postpb.Reply{
+		Id:              rp.ID,
+		PostId:          rp.PostID,
+		ParentCommentId: rp.ParentCommentID,
+		UserId:          rp.UserID,
+		Text:            rp.Text,
+		CreatedAt:       timestamppb.New(rp.CreatedAt),
 	}
 }
 
@@ -367,20 +380,12 @@ func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequ
 	return nil
 }
 
-func optionalString(s *string) *string {
-	if *s == "" {
-		return nil
-	}
-	return s
-}
-
 func (s *PostService) AddComment(ctx context.Context, req *postpb.AddCommentRequest) (*models.Comment, error) {
 	userID, _ := auth.GetUserIDFromContext(ctx)
 	cm := &models.Comment{
-		PostID:          req.PostId,
-		ParentCommentID: optionalString(req.ParentCommentId),
-		UserID:          userID,
-		Text:            req.Text,
+		PostID: req.PostId,
+		UserID: userID,
+		Text:   req.Text,
 	}
 	id, _ := s.repo.CreateComment(ctx, cm)
 	cm.ID = id
@@ -423,25 +428,74 @@ func (s *PostService) AddComment(ctx context.Context, req *postpb.AddCommentRequ
 	return cm, nil
 }
 
+func (s *PostService) AddReply(ctx context.Context, req *postpb.AddReplyRequest) (*models.Reply, error) {
+	userID, _ := auth.GetUserIDFromContext(ctx)
+	rp := &models.Reply{
+		PostID:          req.PostId,
+		ParentCommentID: req.ParentCommentId,
+		UserID:          userID,
+		Text:            req.Text,
+	}
+	id, _ := s.repo.CreateReply(ctx, rp)
+	rp.ID = id
+
+	ev := struct {
+		UserID    string    `json:"user_id"`
+		PostId    string    `json:"post_id"`
+		CommentId string    `json:"comment_id"`
+		CreatedAt time.Time `json:"created_at"`
+	}{
+		UserID:    userID,
+		PostId:    req.PostId,
+		CommentId: id,
+		CreatedAt: time.Now().UTC(),
+	}
+	payload, _ := json.Marshal(ev)
+
+	const retries = 3
+	for range retries {
+		writerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		err := s.commentWriter.WriteMessages(
+			writerCtx,
+			kafka.Message{
+				Key:   []byte(userID),
+				Value: payload,
+			},
+		)
+		if errors.Is(err, kafka.LeaderNotAvailable) || errors.Is(err, context.DeadlineExceeded) {
+			time.Sleep(time.Millisecond * 250)
+			continue
+		}
+
+		if err != nil {
+			log.Printf("failed to write messages: %s", err.Error())
+		}
+		break
+	}
+	return rp, nil
+}
+
 func (s *PostService) ListComments(ctx context.Context, req *postpb.ListCommentsRequest) ([]*postpb.Comment, int, error) {
 	comments, total, _ := s.repo.ListComments(ctx, req.PostId, int(req.Page), int(req.PageSize))
 	var r []*postpb.Comment
 	for _, cm := range comments {
 		r = append(r, &postpb.Comment{
-			Id: cm.ID, PostId: cm.PostID, ParentCommentId: cm.ParentCommentID, UserId: cm.UserID,
+			Id: cm.ID, PostId: cm.PostID, UserId: cm.UserID,
 			Text: cm.Text, CreatedAt: timestamppb.New(cm.CreatedAt),
 		})
 	}
 	return r, total, nil
 }
 
-func (s *PostService) ListReplies(ctx context.Context, req *postpb.ListRepliesRequest) ([]*postpb.Comment, error) {
+func (s *PostService) ListReplies(ctx context.Context, req *postpb.ListRepliesRequest) ([]*postpb.Reply, error) {
 	reps, _ := s.repo.ListReplies(ctx, req.ParentCommentId)
-	var r []*postpb.Comment
-	for _, cm := range reps {
-		r = append(r, &postpb.Comment{
-			Id: cm.ID, PostId: cm.PostID, ParentCommentId: cm.ParentCommentID, UserId: cm.UserID,
-			Text: cm.Text, CreatedAt: timestamppb.New(cm.CreatedAt),
+	var r []*postpb.Reply
+	for _, rp := range reps {
+		r = append(r, &postpb.Reply{
+			Id: rp.ID, PostId: rp.PostID, ParentCommentId: rp.ParentCommentID, UserId: rp.UserID,
+			Text: rp.Text, CreatedAt: timestamppb.New(rp.CreatedAt),
 		})
 	}
 	return r, nil

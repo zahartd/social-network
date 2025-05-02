@@ -394,8 +394,7 @@ func (h *PostHandler) AddComment(c *gin.Context) {
 	}
 
 	var body struct {
-		ParentCommentID string `json:"parent_comment_id"`
-		Text            string `json:"text"`
+		Text string `json:"text"`
 	}
 
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -414,12 +413,64 @@ func (h *PostHandler) AddComment(c *gin.Context) {
 	}
 
 	grpcReq := &postpb.AddCommentRequest{
-		PostId:          targetPostID,
-		ParentCommentId: &body.ParentCommentID,
-		Text:            body.Text,
+		PostId: targetPostID,
+		Text:   body.Text,
 	}
 
 	cm, err := h.postClient.AddComment(ctx, grpcReq)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, cm)
+}
+
+func (h *PostHandler) AddReply(c *gin.Context) {
+	targetPostID := c.Param("postID")
+	if targetPostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Post ID parameter (:postID) is required"})
+		return
+	}
+	err := utils.ValidatePostID(targetPostID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	parentCommentID := c.Param("commentID")
+	if parentCommentID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parent comment ID parameter (:commentID) is required"})
+		return
+	}
+	err = utils.ValidateCommentID(parentCommentID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	var body struct {
+		Text string `json:"text"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if strings.TrimSpace(body.Text) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "text is required"})
+		return
+	}
+
+	ctx, err := createAuthContext(c)
+	if err != nil {
+		MapGrpcError(c, err)
+		return
+	}
+
+	grpcReq := &postpb.AddReplyRequest{
+		PostId:          targetPostID,
+		ParentCommentId: parentCommentID,
+		Text:            body.Text,
+	}
+
+	cm, err := h.postClient.AddReply(ctx, grpcReq)
 	if err != nil {
 		MapGrpcError(c, err)
 		return

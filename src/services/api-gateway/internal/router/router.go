@@ -44,6 +44,7 @@ func SetupRouter(postClient postpb.PostServiceClient, userServiceURL *url.URL) *
 		postProtected.DELETE("/:postID/like", postHandlers.UnlikePost)
 		postProtected.GET("/:postID/comments", postHandlers.ListComments)
 		postProtected.POST("/:postID/comments", postHandlers.AddComment)
+		postProtected.POST("/:postID/comments/:commentID/replies", postHandlers.AddReply)
 		postProtected.GET("/:postID/comments/:commentID/replies", postHandlers.ListReplies)
 	}
 

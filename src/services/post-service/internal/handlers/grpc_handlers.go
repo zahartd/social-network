@@ -97,12 +97,20 @@ func (h *PostGRPCHandler) AddComment(ctx context.Context, req *postpb.AddComment
 	return &postpb.CommentResponse{Comment: service.ToProtoComment(cm)}, nil
 }
 
+func (h *PostGRPCHandler) AddReply(ctx context.Context, req *postpb.AddReplyRequest) (*postpb.ReplyResponse, error) {
+	rp, err := h.postService.AddReply(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &postpb.ReplyResponse{Reply: service.ToProtoReply(rp)}, nil
+}
+
 func (h *PostGRPCHandler) ListComments(ctx context.Context, req *postpb.ListCommentsRequest) (*postpb.ListCommentsResponse, error) {
 	cms, total, _ := h.postService.ListComments(ctx, req)
 	return &postpb.ListCommentsResponse{Comments: cms, TotalCount: int32(total), Page: req.Page, PageSize: req.PageSize}, nil
 }
 
-func (h *PostGRPCHandler) ListReplies(ctx context.Context, req *postpb.ListRepliesRequest) (*postpb.ListCommentsResponse, error) {
+func (h *PostGRPCHandler) ListReplies(ctx context.Context, req *postpb.ListRepliesRequest) (*postpb.ListRepliesResponse, error) {
 	reps, _ := h.postService.ListReplies(ctx, req)
-	return &postpb.ListCommentsResponse{Comments: reps, TotalCount: int32(len(reps)), Page: 1, PageSize: int32(len(reps))}, nil
+	return &postpb.ListRepliesResponse{Replies: reps, TotalCount: int32(len(reps)), Page: 1, PageSize: int32(len(reps))}, nil
 }

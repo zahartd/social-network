@@ -712,12 +712,11 @@ func (x *UnlikePostRequest) GetPostId() string {
 }
 
 type AddCommentRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	PostId          string                 `protobuf:"bytes,1,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
-	ParentCommentId *string                `protobuf:"bytes,2,opt,name=parent_comment_id,json=parentCommentId,proto3,oneof" json:"parent_comment_id,omitempty"`
-	Text            string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PostId        string                 `protobuf:"bytes,1,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
+	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddCommentRequest) Reset() {
@@ -757,13 +756,6 @@ func (x *AddCommentRequest) GetPostId() string {
 	return ""
 }
 
-func (x *AddCommentRequest) GetParentCommentId() string {
-	if x != nil && x.ParentCommentId != nil {
-		return *x.ParentCommentId
-	}
-	return ""
-}
-
 func (x *AddCommentRequest) GetText() string {
 	if x != nil {
 		return x.Text
@@ -772,15 +764,14 @@ func (x *AddCommentRequest) GetText() string {
 }
 
 type Comment struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	PostId          string                 `protobuf:"bytes,2,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
-	ParentCommentId *string                `protobuf:"bytes,3,opt,name=parent_comment_id,json=parentCommentId,proto3,oneof" json:"parent_comment_id,omitempty"`
-	UserId          string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Text            string                 `protobuf:"bytes,5,opt,name=text,proto3" json:"text,omitempty"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PostId        string                 `protobuf:"bytes,2,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Comment) Reset() {
@@ -823,13 +814,6 @@ func (x *Comment) GetId() string {
 func (x *Comment) GetPostId() string {
 	if x != nil {
 		return x.PostId
-	}
-	return ""
-}
-
-func (x *Comment) GetParentCommentId() string {
-	if x != nil && x.ParentCommentId != nil {
-		return *x.ParentCommentId
 	}
 	return ""
 }
@@ -959,6 +943,194 @@ func (x *ListCommentsRequest) GetPageSize() int32 {
 	return 0
 }
 
+type AddReplyRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PostId          string                 `protobuf:"bytes,1,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
+	ParentCommentId string                 `protobuf:"bytes,2,opt,name=parent_comment_id,json=parentCommentId,proto3" json:"parent_comment_id,omitempty"`
+	Text            string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AddReplyRequest) Reset() {
+	*x = AddReplyRequest{}
+	mi := &file_post_post_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddReplyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddReplyRequest) ProtoMessage() {}
+
+func (x *AddReplyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_post_post_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddReplyRequest.ProtoReflect.Descriptor instead.
+func (*AddReplyRequest) Descriptor() ([]byte, []int) {
+	return file_post_post_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *AddReplyRequest) GetPostId() string {
+	if x != nil {
+		return x.PostId
+	}
+	return ""
+}
+
+func (x *AddReplyRequest) GetParentCommentId() string {
+	if x != nil {
+		return x.ParentCommentId
+	}
+	return ""
+}
+
+func (x *AddReplyRequest) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+type Reply struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PostId          string                 `protobuf:"bytes,2,opt,name=post_id,json=postId,proto3" json:"post_id,omitempty"`
+	ParentCommentId string                 `protobuf:"bytes,3,opt,name=parent_comment_id,json=parentCommentId,proto3" json:"parent_comment_id,omitempty"`
+	UserId          string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Text            string                 `protobuf:"bytes,5,opt,name=text,proto3" json:"text,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Reply) Reset() {
+	*x = Reply{}
+	mi := &file_post_post_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Reply) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Reply) ProtoMessage() {}
+
+func (x *Reply) ProtoReflect() protoreflect.Message {
+	mi := &file_post_post_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Reply.ProtoReflect.Descriptor instead.
+func (*Reply) Descriptor() ([]byte, []int) {
+	return file_post_post_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *Reply) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Reply) GetPostId() string {
+	if x != nil {
+		return x.PostId
+	}
+	return ""
+}
+
+func (x *Reply) GetParentCommentId() string {
+	if x != nil {
+		return x.ParentCommentId
+	}
+	return ""
+}
+
+func (x *Reply) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Reply) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *Reply) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type ReplyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reply         *Reply                 `protobuf:"bytes,1,opt,name=reply,proto3" json:"reply,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplyResponse) Reset() {
+	*x = ReplyResponse{}
+	mi := &file_post_post_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplyResponse) ProtoMessage() {}
+
+func (x *ReplyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_post_post_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplyResponse.ProtoReflect.Descriptor instead.
+func (*ReplyResponse) Descriptor() ([]byte, []int) {
+	return file_post_post_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ReplyResponse) GetReply() *Reply {
+	if x != nil {
+		return x.Reply
+	}
+	return nil
+}
+
 type ListRepliesRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	ParentCommentId string                 `protobuf:"bytes,1,opt,name=parent_comment_id,json=parentCommentId,proto3" json:"parent_comment_id,omitempty"`
@@ -968,7 +1140,7 @@ type ListRepliesRequest struct {
 
 func (x *ListRepliesRequest) Reset() {
 	*x = ListRepliesRequest{}
-	mi := &file_post_post_proto_msgTypes[16]
+	mi := &file_post_post_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -980,7 +1152,7 @@ func (x *ListRepliesRequest) String() string {
 func (*ListRepliesRequest) ProtoMessage() {}
 
 func (x *ListRepliesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_post_post_proto_msgTypes[16]
+	mi := &file_post_post_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -993,7 +1165,7 @@ func (x *ListRepliesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRepliesRequest.ProtoReflect.Descriptor instead.
 func (*ListRepliesRequest) Descriptor() ([]byte, []int) {
-	return file_post_post_proto_rawDescGZIP(), []int{16}
+	return file_post_post_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListRepliesRequest) GetParentCommentId() string {
@@ -1015,7 +1187,7 @@ type ListCommentsResponse struct {
 
 func (x *ListCommentsResponse) Reset() {
 	*x = ListCommentsResponse{}
-	mi := &file_post_post_proto_msgTypes[17]
+	mi := &file_post_post_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1027,7 +1199,7 @@ func (x *ListCommentsResponse) String() string {
 func (*ListCommentsResponse) ProtoMessage() {}
 
 func (x *ListCommentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_post_post_proto_msgTypes[17]
+	mi := &file_post_post_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1040,7 +1212,7 @@ func (x *ListCommentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCommentsResponse.ProtoReflect.Descriptor instead.
 func (*ListCommentsResponse) Descriptor() ([]byte, []int) {
-	return file_post_post_proto_rawDescGZIP(), []int{17}
+	return file_post_post_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListCommentsResponse) GetComments() []*Comment {
@@ -1065,6 +1237,74 @@ func (x *ListCommentsResponse) GetPage() int32 {
 }
 
 func (x *ListCommentsResponse) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type ListRepliesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Replies       []*Reply               `protobuf:"bytes,1,rep,name=replies,proto3" json:"replies,omitempty"`
+	TotalCount    int32                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRepliesResponse) Reset() {
+	*x = ListRepliesResponse{}
+	mi := &file_post_post_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRepliesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRepliesResponse) ProtoMessage() {}
+
+func (x *ListRepliesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_post_post_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRepliesResponse.ProtoReflect.Descriptor instead.
+func (*ListRepliesResponse) Descriptor() ([]byte, []int) {
+	return file_post_post_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListRepliesResponse) GetReplies() []*Reply {
+	if x != nil {
+		return x.Replies
+	}
+	return nil
+}
+
+func (x *ListRepliesResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *ListRepliesResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListRepliesResponse) GetPageSize() int32 {
 	if x != nil {
 		return x.PageSize
 	}
@@ -1129,27 +1369,37 @@ const file_post_post_proto_rawDesc = "" +
 	"\x0fLikePostRequest\x12\x17\n" +
 	"\apost_id\x18\x01 \x01(\tR\x06postId\",\n" +
 	"\x11UnlikePostRequest\x12\x17\n" +
-	"\apost_id\x18\x01 \x01(\tR\x06postId\"\x87\x01\n" +
+	"\apost_id\x18\x01 \x01(\tR\x06postId\"@\n" +
 	"\x11AddCommentRequest\x12\x17\n" +
-	"\apost_id\x18\x01 \x01(\tR\x06postId\x12/\n" +
-	"\x11parent_comment_id\x18\x02 \x01(\tH\x00R\x0fparentCommentId\x88\x01\x01\x12\x12\n" +
-	"\x04text\x18\x03 \x01(\tR\x04textB\x14\n" +
-	"\x12_parent_comment_id\"\xe1\x01\n" +
+	"\apost_id\x18\x01 \x01(\tR\x06postId\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\x9a\x01\n" +
 	"\aComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\apost_id\x18\x02 \x01(\tR\x06postId\x12/\n" +
-	"\x11parent_comment_id\x18\x03 \x01(\tH\x00R\x0fparentCommentId\x88\x01\x01\x12\x17\n" +
-	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x12\n" +
-	"\x04text\x18\x05 \x01(\tR\x04text\x129\n" +
+	"\apost_id\x18\x02 \x01(\tR\x06postId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04text\x18\x04 \x01(\tR\x04text\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\x14\n" +
-	"\x12_parent_comment_id\":\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\":\n" +
 	"\x0fCommentResponse\x12'\n" +
 	"\acomment\x18\x01 \x01(\v2\r.post.CommentR\acomment\"_\n" +
 	"\x13ListCommentsRequest\x12\x17\n" +
 	"\apost_id\x18\x01 \x01(\tR\x06postId\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"@\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"j\n" +
+	"\x0fAddReplyRequest\x12\x17\n" +
+	"\apost_id\x18\x01 \x01(\tR\x06postId\x12*\n" +
+	"\x11parent_comment_id\x18\x02 \x01(\tR\x0fparentCommentId\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\"\xc4\x01\n" +
+	"\x05Reply\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\apost_id\x18\x02 \x01(\tR\x06postId\x12*\n" +
+	"\x11parent_comment_id\x18\x03 \x01(\tR\x0fparentCommentId\x12\x17\n" +
+	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x12\n" +
+	"\x04text\x18\x05 \x01(\tR\x04text\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"2\n" +
+	"\rReplyResponse\x12!\n" +
+	"\x05reply\x18\x01 \x01(\v2\v.post.ReplyR\x05reply\"@\n" +
 	"\x12ListRepliesRequest\x12*\n" +
 	"\x11parent_comment_id\x18\x01 \x01(\tR\x0fparentCommentId\"\x93\x01\n" +
 	"\x14ListCommentsResponse\x12)\n" +
@@ -1157,7 +1407,13 @@ const file_post_post_proto_rawDesc = "" +
 	"\vtotal_count\x18\x02 \x01(\x05R\n" +
 	"totalCount\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x04 \x01(\x05R\bpageSize2\x82\x06\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\"\x8e\x01\n" +
+	"\x13ListRepliesResponse\x12%\n" +
+	"\areplies\x18\x01 \x03(\v2\v.post.ReplyR\areplies\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x05R\n" +
+	"totalCount\x12\x12\n" +
+	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize2\xb9\x06\n" +
 	"\vPostService\x129\n" +
 	"\n" +
 	"CreatePost\x12\x17.post.CreatePostRequest\x1a\x12.post.PostResponse\x123\n" +
@@ -1173,9 +1429,10 @@ const file_post_post_proto_rawDesc = "" +
 	"\n" +
 	"UnlikePost\x12\x17.post.UnlikePostRequest\x1a\x16.google.protobuf.Empty\x12<\n" +
 	"\n" +
-	"AddComment\x12\x17.post.AddCommentRequest\x1a\x15.post.CommentResponse\x12E\n" +
-	"\fListComments\x12\x19.post.ListCommentsRequest\x1a\x1a.post.ListCommentsResponse\x12C\n" +
-	"\vListReplies\x12\x18.post.ListRepliesRequest\x1a\x1a.post.ListCommentsResponseB3Z1github.com/zahartd/social-network/src/gen/go/postb\x06proto3"
+	"AddComment\x12\x17.post.AddCommentRequest\x1a\x15.post.CommentResponse\x126\n" +
+	"\bAddReply\x12\x15.post.AddReplyRequest\x1a\x13.post.ReplyResponse\x12E\n" +
+	"\fListComments\x12\x19.post.ListCommentsRequest\x1a\x1a.post.ListCommentsResponse\x12B\n" +
+	"\vListReplies\x12\x18.post.ListRepliesRequest\x1a\x19.post.ListRepliesResponseB3Z1github.com/zahartd/social-network/src/gen/go/postb\x06proto3"
 
 var (
 	file_post_post_proto_rawDescOnce sync.Once
@@ -1189,7 +1446,7 @@ func file_post_post_proto_rawDescGZIP() []byte {
 	return file_post_post_proto_rawDescData
 }
 
-var file_post_post_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_post_post_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_post_post_proto_goTypes = []any{
 	(*Post)(nil),                   // 0: post.Post
 	(*CreatePostRequest)(nil),      // 1: post.CreatePostRequest
@@ -1207,48 +1464,57 @@ var file_post_post_proto_goTypes = []any{
 	(*Comment)(nil),                // 13: post.Comment
 	(*CommentResponse)(nil),        // 14: post.CommentResponse
 	(*ListCommentsRequest)(nil),    // 15: post.ListCommentsRequest
-	(*ListRepliesRequest)(nil),     // 16: post.ListRepliesRequest
-	(*ListCommentsResponse)(nil),   // 17: post.ListCommentsResponse
-	(*timestamppb.Timestamp)(nil),  // 18: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),          // 19: google.protobuf.Empty
+	(*AddReplyRequest)(nil),        // 16: post.AddReplyRequest
+	(*Reply)(nil),                  // 17: post.Reply
+	(*ReplyResponse)(nil),          // 18: post.ReplyResponse
+	(*ListRepliesRequest)(nil),     // 19: post.ListRepliesRequest
+	(*ListCommentsResponse)(nil),   // 20: post.ListCommentsResponse
+	(*ListRepliesResponse)(nil),    // 21: post.ListRepliesResponse
+	(*timestamppb.Timestamp)(nil),  // 22: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),          // 23: google.protobuf.Empty
 }
 var file_post_post_proto_depIdxs = []int32{
-	18, // 0: post.Post.created_at:type_name -> google.protobuf.Timestamp
-	18, // 1: post.Post.updated_at:type_name -> google.protobuf.Timestamp
+	22, // 0: post.Post.created_at:type_name -> google.protobuf.Timestamp
+	22, // 1: post.Post.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: post.PostResponse.post:type_name -> post.Post
 	0,  // 3: post.ListPostsResponse.posts:type_name -> post.Post
-	18, // 4: post.Comment.created_at:type_name -> google.protobuf.Timestamp
+	22, // 4: post.Comment.created_at:type_name -> google.protobuf.Timestamp
 	13, // 5: post.CommentResponse.comment:type_name -> post.Comment
-	13, // 6: post.ListCommentsResponse.comments:type_name -> post.Comment
-	1,  // 7: post.PostService.CreatePost:input_type -> post.CreatePostRequest
-	3,  // 8: post.PostService.GetPost:input_type -> post.GetPostRequest
-	4,  // 9: post.PostService.UpdatePost:input_type -> post.UpdatePostRequest
-	5,  // 10: post.PostService.DeletePost:input_type -> post.DeletePostRequest
-	6,  // 11: post.PostService.ListMyPosts:input_type -> post.ListMyPostsRequest
-	7,  // 12: post.PostService.ListPublicPosts:input_type -> post.ListPublicPostsRequest
-	9,  // 13: post.PostService.ViewPost:input_type -> post.ViewPostRequest
-	10, // 14: post.PostService.LikePost:input_type -> post.LikePostRequest
-	11, // 15: post.PostService.UnlikePost:input_type -> post.UnlikePostRequest
-	12, // 16: post.PostService.AddComment:input_type -> post.AddCommentRequest
-	15, // 17: post.PostService.ListComments:input_type -> post.ListCommentsRequest
-	16, // 18: post.PostService.ListReplies:input_type -> post.ListRepliesRequest
-	2,  // 19: post.PostService.CreatePost:output_type -> post.PostResponse
-	2,  // 20: post.PostService.GetPost:output_type -> post.PostResponse
-	2,  // 21: post.PostService.UpdatePost:output_type -> post.PostResponse
-	19, // 22: post.PostService.DeletePost:output_type -> google.protobuf.Empty
-	8,  // 23: post.PostService.ListMyPosts:output_type -> post.ListPostsResponse
-	8,  // 24: post.PostService.ListPublicPosts:output_type -> post.ListPostsResponse
-	19, // 25: post.PostService.ViewPost:output_type -> google.protobuf.Empty
-	19, // 26: post.PostService.LikePost:output_type -> google.protobuf.Empty
-	19, // 27: post.PostService.UnlikePost:output_type -> google.protobuf.Empty
-	14, // 28: post.PostService.AddComment:output_type -> post.CommentResponse
-	17, // 29: post.PostService.ListComments:output_type -> post.ListCommentsResponse
-	17, // 30: post.PostService.ListReplies:output_type -> post.ListCommentsResponse
-	19, // [19:31] is the sub-list for method output_type
-	7,  // [7:19] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	22, // 6: post.Reply.created_at:type_name -> google.protobuf.Timestamp
+	17, // 7: post.ReplyResponse.reply:type_name -> post.Reply
+	13, // 8: post.ListCommentsResponse.comments:type_name -> post.Comment
+	17, // 9: post.ListRepliesResponse.replies:type_name -> post.Reply
+	1,  // 10: post.PostService.CreatePost:input_type -> post.CreatePostRequest
+	3,  // 11: post.PostService.GetPost:input_type -> post.GetPostRequest
+	4,  // 12: post.PostService.UpdatePost:input_type -> post.UpdatePostRequest
+	5,  // 13: post.PostService.DeletePost:input_type -> post.DeletePostRequest
+	6,  // 14: post.PostService.ListMyPosts:input_type -> post.ListMyPostsRequest
+	7,  // 15: post.PostService.ListPublicPosts:input_type -> post.ListPublicPostsRequest
+	9,  // 16: post.PostService.ViewPost:input_type -> post.ViewPostRequest
+	10, // 17: post.PostService.LikePost:input_type -> post.LikePostRequest
+	11, // 18: post.PostService.UnlikePost:input_type -> post.UnlikePostRequest
+	12, // 19: post.PostService.AddComment:input_type -> post.AddCommentRequest
+	16, // 20: post.PostService.AddReply:input_type -> post.AddReplyRequest
+	15, // 21: post.PostService.ListComments:input_type -> post.ListCommentsRequest
+	19, // 22: post.PostService.ListReplies:input_type -> post.ListRepliesRequest
+	2,  // 23: post.PostService.CreatePost:output_type -> post.PostResponse
+	2,  // 24: post.PostService.GetPost:output_type -> post.PostResponse
+	2,  // 25: post.PostService.UpdatePost:output_type -> post.PostResponse
+	23, // 26: post.PostService.DeletePost:output_type -> google.protobuf.Empty
+	8,  // 27: post.PostService.ListMyPosts:output_type -> post.ListPostsResponse
+	8,  // 28: post.PostService.ListPublicPosts:output_type -> post.ListPostsResponse
+	23, // 29: post.PostService.ViewPost:output_type -> google.protobuf.Empty
+	23, // 30: post.PostService.LikePost:output_type -> google.protobuf.Empty
+	23, // 31: post.PostService.UnlikePost:output_type -> google.protobuf.Empty
+	14, // 32: post.PostService.AddComment:output_type -> post.CommentResponse
+	18, // 33: post.PostService.AddReply:output_type -> post.ReplyResponse
+	20, // 34: post.PostService.ListComments:output_type -> post.ListCommentsResponse
+	21, // 35: post.PostService.ListReplies:output_type -> post.ListRepliesResponse
+	23, // [23:36] is the sub-list for method output_type
+	10, // [10:23] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_post_post_proto_init() }
@@ -1257,15 +1523,13 @@ func file_post_post_proto_init() {
 		return
 	}
 	file_post_post_proto_msgTypes[7].OneofWrappers = []any{}
-	file_post_post_proto_msgTypes[12].OneofWrappers = []any{}
-	file_post_post_proto_msgTypes[13].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_post_post_proto_rawDesc), len(file_post_post_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

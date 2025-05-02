@@ -20,8 +20,9 @@ service PostService {
   rpc UnlikePost (UnlikePostRequest) returns (google.protobuf.Empty);
 
   rpc AddComment (AddCommentRequest) returns (CommentResponse);
+  rpc AddReply (AddReplyRequest) returns (ReplyResponse);
   rpc ListComments (ListCommentsRequest)  returns (ListCommentsResponse);
-  rpc ListReplies (ListRepliesRequest) returns (ListCommentsResponse);
+  rpc ListReplies (ListRepliesRequest) returns (ListRepliesResponse);
 }
 
 message Post {
@@ -94,17 +95,15 @@ message UnlikePostRequest {
 
 message AddCommentRequest {
   string post_id = 1;
-  optional string parent_comment_id = 2;
-  string text = 3;
+  string text = 2;
 }
 
 message Comment {
   string id = 1;
   string post_id = 2;
-  optional string parent_comment_id = 3;
-  string user_id = 4;
-  string text = 5;
-  google.protobuf.Timestamp created_at = 6;
+  string user_id = 3;
+  string text = 4;
+  google.protobuf.Timestamp created_at = 5;
 }
 
 message CommentResponse  {
@@ -117,12 +116,38 @@ message ListCommentsRequest {
   int32 page_size = 3;
 }
 
+message AddReplyRequest {
+  string post_id = 1;
+  string parent_comment_id = 2;
+  string text = 3;
+}
+
+message Reply {
+  string id = 1;
+  string post_id = 2;
+  string parent_comment_id = 3;
+  string user_id = 4;
+  string text = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ReplyResponse  {
+  Reply reply = 1;
+}
+
 message ListRepliesRequest {
   string parent_comment_id = 1;
 }
 
 message ListCommentsResponse {
   repeated Comment comments = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListRepliesResponse {
+  repeated Reply replies = 1;
   int32 total_count = 2;
   int32 page = 3;
   int32 page_size = 4;

@@ -30,6 +30,7 @@ const (
 	PostService_LikePost_FullMethodName        = "/post.PostService/LikePost"
 	PostService_UnlikePost_FullMethodName      = "/post.PostService/UnlikePost"
 	PostService_AddComment_FullMethodName      = "/post.PostService/AddComment"
+	PostService_AddReply_FullMethodName        = "/post.PostService/AddReply"
 	PostService_ListComments_FullMethodName    = "/post.PostService/ListComments"
 	PostService_ListReplies_FullMethodName     = "/post.PostService/ListReplies"
 )
@@ -48,8 +49,9 @@ type PostServiceClient interface {
 	LikePost(ctx context.Context, in *LikePostRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UnlikePost(ctx context.Context, in *UnlikePostRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddComment(ctx context.Context, in *AddCommentRequest, opts ...grpc.CallOption) (*CommentResponse, error)
+	AddReply(ctx context.Context, in *AddReplyRequest, opts ...grpc.CallOption) (*ReplyResponse, error)
 	ListComments(ctx context.Context, in *ListCommentsRequest, opts ...grpc.CallOption) (*ListCommentsResponse, error)
-	ListReplies(ctx context.Context, in *ListRepliesRequest, opts ...grpc.CallOption) (*ListCommentsResponse, error)
+	ListReplies(ctx context.Context, in *ListRepliesRequest, opts ...grpc.CallOption) (*ListRepliesResponse, error)
 }
 
 type postServiceClient struct {
@@ -160,6 +162,16 @@ func (c *postServiceClient) AddComment(ctx context.Context, in *AddCommentReques
 	return out, nil
 }
 
+func (c *postServiceClient) AddReply(ctx context.Context, in *AddReplyRequest, opts ...grpc.CallOption) (*ReplyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplyResponse)
+	err := c.cc.Invoke(ctx, PostService_AddReply_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *postServiceClient) ListComments(ctx context.Context, in *ListCommentsRequest, opts ...grpc.CallOption) (*ListCommentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCommentsResponse)
@@ -170,9 +182,9 @@ func (c *postServiceClient) ListComments(ctx context.Context, in *ListCommentsRe
 	return out, nil
 }
 
-func (c *postServiceClient) ListReplies(ctx context.Context, in *ListRepliesRequest, opts ...grpc.CallOption) (*ListCommentsResponse, error) {
+func (c *postServiceClient) ListReplies(ctx context.Context, in *ListRepliesRequest, opts ...grpc.CallOption) (*ListRepliesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListCommentsResponse)
+	out := new(ListRepliesResponse)
 	err := c.cc.Invoke(ctx, PostService_ListReplies_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -194,8 +206,9 @@ type PostServiceServer interface {
 	LikePost(context.Context, *LikePostRequest) (*emptypb.Empty, error)
 	UnlikePost(context.Context, *UnlikePostRequest) (*emptypb.Empty, error)
 	AddComment(context.Context, *AddCommentRequest) (*CommentResponse, error)
+	AddReply(context.Context, *AddReplyRequest) (*ReplyResponse, error)
 	ListComments(context.Context, *ListCommentsRequest) (*ListCommentsResponse, error)
-	ListReplies(context.Context, *ListRepliesRequest) (*ListCommentsResponse, error)
+	ListReplies(context.Context, *ListRepliesRequest) (*ListRepliesResponse, error)
 	mustEmbedUnimplementedPostServiceServer()
 }
 
@@ -236,10 +249,13 @@ func (UnimplementedPostServiceServer) UnlikePost(context.Context, *UnlikePostReq
 func (UnimplementedPostServiceServer) AddComment(context.Context, *AddCommentRequest) (*CommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddComment not implemented")
 }
+func (UnimplementedPostServiceServer) AddReply(context.Context, *AddReplyRequest) (*ReplyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddReply not implemented")
+}
 func (UnimplementedPostServiceServer) ListComments(context.Context, *ListCommentsRequest) (*ListCommentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListComments not implemented")
 }
-func (UnimplementedPostServiceServer) ListReplies(context.Context, *ListRepliesRequest) (*ListCommentsResponse, error) {
+func (UnimplementedPostServiceServer) ListReplies(context.Context, *ListRepliesRequest) (*ListRepliesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListReplies not implemented")
 }
 func (UnimplementedPostServiceServer) mustEmbedUnimplementedPostServiceServer() {}
@@ -443,6 +459,24 @@ func _PostService_AddComment_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PostService_AddReply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddReplyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PostServiceServer).AddReply(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PostService_AddReply_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PostServiceServer).AddReply(ctx, req.(*AddReplyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PostService_ListComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCommentsRequest)
 	if err := dec(in); err != nil {
@@ -525,6 +559,10 @@ var PostService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddComment",
 			Handler:    _PostService_AddComment_Handler,
+		},
+		{
+			MethodName: "AddReply",
+			Handler:    _PostService_AddReply_Handler,
 		},
 		{
 			MethodName: "ListComments",

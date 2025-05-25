@@ -4,5 +4,6 @@ use (
 	./gen/go
 	./services/api-gateway
 	./services/post-service
+	./services/stats-service
 	./services/user-service
 )

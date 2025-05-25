@@ -150,6 +150,54 @@ services:
       - social-net
     restart: unless-stopped
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' "]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - social-net
+
+  migrate-stats:
+    image: migrate/migrate:v4.17.1
+    container_name: migrate-stats
+    command: [
+      "-path", "/migrations",
+      "-database", "clickhouse://default:@clickhouse:9000/default",
+      "up"
+    ]
+    volumes:
+      - ./services/stats-service/migrations:/migrations
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - social-net
+    restart: on-failure
+
+  stats-service:
+    build:
+      context: .
+      dockerfile: ./services/stats-service/Dockerfile
+    container_name: stats-service
+    environment:
+      CLICKHOUSE_DSN: tcp://clickhouse:9000?username=default&password=&database=default
+      KAFKA_BROKER_URL: kafka:9092
+      GRPC_PORT: "50052"
+    depends_on:
+      migrate-stats:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    networks:
+      - social-net
+
   api-gateway:
     build:
       context: .
@@ -160,6 +208,7 @@ services:
     environment:
       USER_SERVICE_URL: http://user-service:8081
       POST_SERVICE_GRPC_URL: post-service:50051
+      STATS_SERVICE_GRPC_URL: stats-service:50052
       PORT: 8080
       JWT_PUBLIC_KEY: /app/certs/id_rsa.pub
       KAFKA_BROKER_URL: kafka:9092
@@ -168,6 +217,7 @@ services:
     depends_on:
       - user-service
       - post-service
+      - stats-service
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/ping"]
       interval: 5s

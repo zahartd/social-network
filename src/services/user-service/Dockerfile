@@ -1,4 +1,4 @@
-FROM golang:1.24.0-alpine AS builder
+FROM golang:1.24.3-alpine AS builder
 WORKDIR /workspace
 COPY go.work go.work.sum ./
 COPY services/api-gateway/go.mod services/api-gateway/go.sum ./services/api-gateway/

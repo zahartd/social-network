@@ -177,6 +177,7 @@ Enjoy the API and keep an eye on Kafka topics at http://localhost:8082
 
 ```bash
 protoc --proto_path=proto --go_out=gen/go --go_opt=paths=source_relative --go-grpc_out=gen/go --go-grpc_opt=paths=source_relative proto/post/post.proto
+protoc --proto_path=proto --go_out=gen/go --go_opt=paths=source_relative --go-grpc_out=gen/go --go-grpc_opt=paths=source_relative proto/stats/stats.proto
 docker compose down --rmi all --volumes --remove-orphans
 docker compose up --build
 docker compose up migrate

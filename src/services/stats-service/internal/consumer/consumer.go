@@ -14,7 +14,7 @@ import (
 type Event struct {
 	UserID      string    `json:"user_id"`
 	PostID      string    `json:"post_id"`
-	Timestamp   time.Time `json:"viewed_at,omitempty"`
+	ViewedAt    time.Time `json:"viewed_at,omitempty"`
 	LikedAt     time.Time `json:"liked_at,omitempty"`
 	UnlikedAt   time.Time `json:"unliked_at,omitempty"`
 	CommentedAt time.Time `json:"created_at,omitempty"`
@@ -35,28 +35,53 @@ func runConsumer(cfg *config.Config, ck clickhouse.Conn, topic string) {
 	})
 	defer r.Close()
 
+	ctx := context.Background()
 	for {
-		m, err := r.ReadMessage(context.Background())
+		m, err := r.ReadMessage(ctx)
 		if err != nil {
-			log.Printf("reader error %s: %v", topic, err)
+			log.Printf("[Consumer %s] read error: %v", topic, err)
 			time.Sleep(time.Second)
 			continue
 		}
+
 		var ev Event
 		if err := json.Unmarshal(m.Value, &ev); err != nil {
-			log.Printf("unmarshal %s: %v", topic, err)
+			log.Printf("[Consumer %s] json unmarshal error: %v", topic, err)
 			continue
 		}
-		// Определяем дату и метрику
-		date := ev.Timestamp.UTC().Format("2006-01-02")
-		metric := topic // "post-views" и т.п.
-		// Вставляем в ClickHouse
-		err = ck.Exec(context.Background(),
-			`INSERT INTO stats.events (metric, entity_id, event_date, cnt) VALUES (?, ?, ?, 1)`,
-			metric, ev.PostID, date,
-		)
-		if err != nil {
-			log.Printf("clickhouse insert %s: %v", topic, err)
+
+		// pick the timestamp
+		var ts time.Time
+		switch topic {
+		case "post-views":
+			ts = ev.ViewedAt
+		case "post-likes":
+			ts = ev.LikedAt
+		case "post-unlikes":
+			ts = ev.UnlikedAt
+		case "post-comments":
+			ts = ev.CommentedAt
+		default:
+			continue
+		}
+
+		// insert one raw event
+		const q = `
+            INSERT INTO stats.events
+                (event_time, user_id, entity_id, metric, cnt)
+            VALUES (?, ?, ?, ?, ?)`
+		if err := ck.Exec(ctx, q,
+			ts,        // event_time
+			ev.UserID, // user_id
+			ev.PostID, // entity_id
+			topic,     // metric
+			1,         // cnt
+		); err != nil {
+			log.Printf("[Consumer %s] clickhouse insert error: %v", topic, err)
+		}
+
+		if err := r.CommitMessages(ctx, m); err != nil {
+			log.Printf("[Consumer %s] commit offset error: %v", topic, err)
 		}
 	}
 }

@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS stats.events;
+DROP DATABASE IF EXISTS stats;

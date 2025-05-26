@@ -16,6 +16,7 @@ func main() {
 	}
 
 	postClient := client.InitPostServiceClient()
+	statsClient := client.InitStatsServiceClient()
 
 	userServiceURLStr := os.Getenv("USER_SERVICE_URL")
 	if userServiceURLStr == "" {
@@ -26,7 +27,7 @@ func main() {
 		log.Fatalf("Invalid USER_SERVICE_URL: %v", err)
 	}
 
-	r := router.SetupRouter(postClient, userServiceURL)
+	r := router.SetupRouter(postClient, statsClient, userServiceURL)
 
 	port := os.Getenv("PORT")
 	if port == "" {

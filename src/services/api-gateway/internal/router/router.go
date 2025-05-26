@@ -6,11 +6,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	postpb "github.com/zahartd/social-network/src/gen/go/post"
+	statspb "github.com/zahartd/social-network/src/grpc/go/stats"
 	"github.com/zahartd/social-network/src/services/api-gateway/internal/auth"
 	"github.com/zahartd/social-network/src/services/api-gateway/internal/handlers"
 )
 
-func SetupRouter(postClient postpb.PostServiceClient, userServiceURL *url.URL) *gin.Engine {
+func SetupRouter(
+	postClient postpb.PostServiceClient,
+	statsClient statspb.StatsServiceClient,
+	userServiceURL *url.URL,
+) *gin.Engine {
 	router := gin.Default()
 
 	router.Use(gin.Logger())
@@ -46,6 +51,16 @@ func SetupRouter(postClient postpb.PostServiceClient, userServiceURL *url.URL) *
 		postProtected.POST("/:postID/comments", postHandlers.AddComment)
 		postProtected.POST("/:postID/comments/:commentID/replies", postHandlers.AddReply)
 		postProtected.GET("/:postID/comments/:commentID/replies", postHandlers.ListReplies)
+	}
+
+	statsHandlers := handlers.NewStatsHandler(statsClient)
+	statsProtected := router.Group("/stats")
+	statsProtected.Use(auth.Middleware())
+	{
+		statsProtected.GET("/posts/:postID", statsHandlers.GetPostStats)
+		statsProtected.GET("/posts/:postID/dynamics", statsHandlers.GetPostDynamics)
+		statsProtected.GET("/top/posts", statsHandlers.GetTopPosts)
+		statsProtected.GET("/top/users", statsHandlers.GetTopUsers)
 	}
 
 	router.GET("/ping", func(c *gin.Context) {

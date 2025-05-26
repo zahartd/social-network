@@ -335,17 +335,24 @@ func (s *PostService) ViewPost(ctx context.Context, req *postpb.ViewPostRequest)
 }
 
 func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest) error {
-	userID, _ := auth.GetUserIDFromContext(ctx)
-	_ = s.repo.RecordLike(ctx, userID, req.PostId)
+	userID, err := auth.GetUserIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.RecordLike(ctx, userID, req.PostId); err != nil {
+		return err
+	}
 
 	ev := struct {
-		UserID  string    `json:"user_id"`
-		PostId  string    `json:"post_id"`
-		LikedAt time.Time `json:"liked_at"`
+		EventType string    `json:"event_type"`
+		UserID    string    `json:"user_id"`
+		PostId    string    `json:"post_id"`
+		Timestamp time.Time `json:"timestamp"`
 	}{
-		UserID:  userID,
-		PostId:  req.PostId,
-		LikedAt: time.Now().UTC(),
+		EventType: "LIKE",
+		UserID:    userID,
+		PostId:    req.PostId,
+		Timestamp: time.Now().UTC(),
 	}
 	payload, _ := json.Marshal(ev)
 
@@ -375,8 +382,49 @@ func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest)
 }
 
 func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequest) error {
-	userID, _ := auth.GetUserIDFromContext(ctx)
-	_ = s.repo.RemoveLike(ctx, userID, req.PostId)
+	userID, err := auth.GetUserIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.RemoveLike(ctx, userID, req.PostId); err != nil {
+		return err
+	}
+
+	ev := struct {
+		EventType string    `json:"event_type"`
+		UserID    string    `json:"user_id"`
+		PostId    string    `json:"post_id"`
+		Timestamp time.Time `json:"timestamp"`
+	}{
+		EventType: "UNLIKE",
+		UserID:    userID,
+		PostId:    req.PostId,
+		Timestamp: time.Now().UTC(),
+	}
+	payload, _ := json.Marshal(ev)
+
+	const retries = 3
+	for range retries {
+		writerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		err := s.likeWriter.WriteMessages(
+			writerCtx,
+			kafka.Message{
+				Key:   []byte(userID),
+				Value: payload,
+			},
+		)
+		if errors.Is(err, kafka.LeaderNotAvailable) || errors.Is(err, context.DeadlineExceeded) {
+			time.Sleep(time.Millisecond * 250)
+			continue
+		}
+
+		if err != nil {
+			log.Printf("failed to write messages: %s", err.Error())
+		}
+		break
+	}
 	return nil
 }
 

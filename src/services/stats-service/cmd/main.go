@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	statspb "github.com/zahartd/social-network/src/gen/go/stats"
+	statspb "github.com/zahartd/social-network/src/grpc/go/stats"
 )
 
 func main() {

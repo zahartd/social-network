@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package stats;
 
-option go_package = "github.com/zahartd/social-network/src/gen/go/stats;stats";
+option go_package = "github.com/zahartd/social-network/src/grpc/go/stats";
 
 service StatsService {
   rpc GetPostStats(GetPostStatsRequest) returns (GetPostStatsResponse);

@@ -17,14 +17,14 @@ func Load() *Config {
 		port = "50051"
 	}
 
-	dbDSN := os.Getenv("DB_DSN")
-	if dbDSN == "" {
+	ClickhouseDSN := os.Getenv("CLICKHOUSE_DSN")
+	if ClickhouseDSN == "" {
 		log.Fatal("DB_DSN environment variable is not set")
 	}
 
 	return &Config{
 		GRPCPort:       port,
-		DB_DSN:         dbDSN,
+		ClickhouseDSN:  ClickhouseDSN,
 		KafkaBrokerURL: os.Getenv("KAFKA_BROKER_URL"),
 	}
 }

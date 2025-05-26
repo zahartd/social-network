@@ -16,6 +16,9 @@ func InitClickhouse(cfg *config.Config) (clickhouse.Conn, error) {
 		return nil, err
 	}
 	conn, err := clickhouse.Open(opts)
+	if err != nil {
+		return nil, err
+	}
 	if err := conn.Ping(context.Background()); err != nil {
 		if exception, ok := err.(*clickhouse.Exception); ok {
 			fmt.Printf("Exception [%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)

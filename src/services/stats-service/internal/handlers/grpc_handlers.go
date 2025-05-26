@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	statspb "github.com/zahartd/social-network/src/gen/go/stats"
+	statspb "github.com/zahartd/social-network/src/grpc/go/stats"
 )
 
 type GRPCHandler struct {

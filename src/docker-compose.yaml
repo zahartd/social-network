@@ -153,11 +153,15 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse
+    environment:
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=secret
     ports:
       - "8123:8123"
       - "9000:9000"
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' "]
+      test: ["CMD-SHELL","clickhouse-client --user default --password secret --query 'SELECT 1'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -167,11 +171,13 @@ services:
   migrate-stats:
     image: migrate/migrate:v4.17.1
     container_name: migrate-stats
-    command: [
-      "-path", "/migrations",
-      "-database", "clickhouse://default:@clickhouse:9000/default",
-      "up"
-    ]
+    command:
+      [
+        "-path", "/migrations",
+        "-database",
+        "clickhouse://clickhouse:9000/default?username=default&password=secret&x-multi-statement=true",
+        "up"
+      ]
     volumes:
       - ./services/stats-service/migrations:/migrations
     depends_on:
@@ -187,7 +193,7 @@ services:
       dockerfile: ./services/stats-service/Dockerfile
     container_name: stats-service
     environment:
-      CLICKHOUSE_DSN: tcp://clickhouse:9000?username=default&password=&database=default
+      CLICKHOUSE_DSN: tcp://clickhouse:9000?username=default&password=secret&database=default
       KAFKA_BROKER_URL: kafka:9092
       GRPC_PORT: "50052"
     depends_on:

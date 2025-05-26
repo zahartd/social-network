@@ -650,7 +650,7 @@ const file_stats_stats_proto_rawDesc = "" +
 	"\fGetPostStats\x12\x1a.stats.GetPostStatsRequest\x1a\x1b.stats.GetPostStatsResponse\x12H\n" +
 	"\x0fGetPostDynamics\x12\x19.stats.GetDynamicsRequest\x1a\x1a.stats.GetDynamicsResponse\x12<\n" +
 	"\vGetTopPosts\x12\x14.stats.GetTopRequest\x1a\x17.stats.TopPostsResponse\x12<\n" +
-	"\vGetTopUsers\x12\x14.stats.GetTopRequest\x1a\x17.stats.TopUsersResponseB:Z8github.com/zahartd/social-network/src/gen/go/stats;statsb\x06proto3"
+	"\vGetTopUsers\x12\x14.stats.GetTopRequest\x1a\x17.stats.TopUsersResponseB5Z3github.com/zahartd/social-network/src/grpc/go/statsb\x06proto3"
 
 var (
 	file_stats_stats_proto_rawDescOnce sync.Once

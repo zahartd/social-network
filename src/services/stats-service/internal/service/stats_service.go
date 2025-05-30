@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -11,9 +12,10 @@ type DayCount struct {
 	Date  string
 	Count uint64
 }
+
 type TopItem struct {
 	ID    string
-	Count uint64
+	Count int64
 }
 
 type StatsService struct {
@@ -24,77 +26,100 @@ func NewStatsService(ck clickhouse.Conn) *StatsService {
 	return &StatsService{ck: ck}
 }
 
-func (s *StatsService) GetPostStats(postID string) (views, likes, comments uint64, err error) {
-	const q = `
-        SELECT metric, sum(cnt)
-          FROM stats.events
-         WHERE entity_id = ?
-         GROUP BY metric`
-	rows, err := s.ck.Query(context.Background(), q, postID)
-	if err != nil {
+func (s *StatsService) GetPostStats(ctx context.Context, postID string) (views, likes, comments int64, err error) {
+	var (
+		v   uint64
+		pl  uint64
+		pul uint64
+		pc  uint64
+	)
+
+	if err = s.ck.QueryRow(ctx,
+		`SELECT sum(cnt) FROM stats.events WHERE entity_id = ? AND metric = 'post-views'`,
+		postID,
+	).Scan(&v); err != nil {
 		return
 	}
-	defer rows.Close()
 
-	var metric string
-	var sumCnt uint64
-	for rows.Next() {
-		if err = rows.Scan(&metric, &sumCnt); err != nil {
-			return
-		}
-		switch metric {
-		case "post-views":
-			views = sumCnt
-		case "post-likes":
-			likes = sumCnt
-		case "post-unlikes":
-			// subtract
-			if sumCnt > likes {
-				likes = 0
-			} else {
-				likes -= sumCnt
-			}
-		case "post-comments":
-			comments = sumCnt
-		}
+	if err = s.ck.QueryRow(ctx,
+		`SELECT sum(cnt) FROM stats.events WHERE entity_id = ? AND metric = 'post-likes'`,
+		postID,
+	).Scan(&pl); err != nil {
+		return
 	}
+	if err = s.ck.QueryRow(ctx,
+		`SELECT sum(cnt) FROM stats.events WHERE entity_id = ? AND metric = 'post-unlikes'`,
+		postID,
+	).Scan(&pul); err != nil {
+		return
+	}
+
+	if err = s.ck.QueryRow(ctx,
+		`SELECT sum(cnt) FROM stats.events WHERE entity_id = ? AND metric = 'post-comments'`,
+		postID,
+	).Scan(&pc); err != nil {
+		return
+	}
+
+	views = int64(v)
+	likes = int64(pl) - int64(pul)
+	comments = int64(pc)
 	return
 }
 
-func (s *StatsService) GetDynamics(postID, metric string) ([]DayCount, error) {
-	const q = `
-        SELECT event_date, sum(cnt)
-          FROM stats.events
-         WHERE entity_id = ? AND metric = ?
-         GROUP BY event_date
-         ORDER BY event_date`
-	rows, err := s.ck.Query(context.Background(), q, postID, metric)
+func (s *StatsService) GetDynamics(ctx context.Context, postID, metric string) ([]DayCount, error) {
+	q := `
+        SELECT toDate(event_time) AS date, sum(cnt) AS count
+        FROM stats.events
+        WHERE entity_id = ? AND metric = ?
+        GROUP BY date
+        ORDER BY date
+    `
+	rows, err := s.ck.Query(ctx, q, postID, metric)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var out []DayCount
+	var res []DayCount
 	for rows.Next() {
-		var d time.Time
+		var date time.Time
 		var c uint64
-		if err := rows.Scan(&d, &c); err != nil {
+		if err := rows.Scan(&date, &c); err != nil {
 			return nil, err
 		}
-		out = append(out, DayCount{Date: d.Format("2006-01-02"), Count: c})
+		res = append(res, DayCount{
+			Date:  date.Format("2006-01-02"),
+			Count: c,
+		})
 	}
-	return out, nil
+	return res, nil
 }
 
-func (s *StatsService) GetTopPosts(metric string) ([]TopItem, error) {
-	const q = `
-        SELECT entity_id, sum(cnt) as c
-          FROM stats.events
-         WHERE metric = ?
-         GROUP BY entity_id
-         ORDER BY c DESC
-         LIMIT 10`
-	rows, err := s.ck.Query(context.Background(), q, metric)
+func (s *StatsService) GetTopPosts(ctx context.Context, metric string) ([]TopItem, error) {
+	var q string
+	if metric == "post-likes" {
+		q = `
+            SELECT
+              entity_id,
+              sumIf(cnt, metric='post-likes') - sumIf(cnt, metric='post-unlikes') AS total
+            FROM stats.events
+            GROUP BY entity_id
+            ORDER BY total DESC
+            LIMIT 10
+        `
+	} else {
+		q = fmt.Sprintf(`
+            SELECT entity_id, sum(cnt) AS total
+            FROM stats.events
+            WHERE metric = '%s'
+            GROUP BY entity_id
+            ORDER BY total DESC
+            LIMIT 10
+        `, metric)
+	}
+
+	rows, err := s.ck.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -102,25 +127,49 @@ func (s *StatsService) GetTopPosts(metric string) ([]TopItem, error) {
 
 	var out []TopItem
 	for rows.Next() {
-		var id string
-		var c uint64
-		if err := rows.Scan(&id, &c); err != nil {
-			return nil, err
+		if metric == "post-likes" {
+			var id string
+			var total int64
+			if err := rows.Scan(&id, &total); err != nil {
+				return nil, err
+			}
+			out = append(out, TopItem{ID: id, Count: total})
+		} else {
+			var id string
+			var total uint64
+			if err := rows.Scan(&id, &total); err != nil {
+				return nil, err
+			}
+			out = append(out, TopItem{ID: id, Count: int64(total)})
 		}
-		out = append(out, TopItem{ID: id, Count: c})
 	}
 	return out, nil
 }
 
-func (s *StatsService) GetTopUsers(metric string) ([]TopItem, error) {
-	const q = `
-        SELECT user_id, sum(cnt) as c
-          FROM stats.events
-         WHERE metric = ?
-         GROUP BY user_id
-         ORDER BY c DESC
-         LIMIT 10`
-	rows, err := s.ck.Query(context.Background(), q, metric)
+func (s *StatsService) GetTopUsers(ctx context.Context, metric string) ([]TopItem, error) {
+	var q string
+	if metric == "post-likes" {
+		q = `
+            SELECT
+              user_id,
+              sumIf(cnt, metric='post-likes') - sumIf(cnt, metric='post-unlikes') AS total
+            FROM stats.events
+            GROUP BY user_id
+            ORDER BY total DESC
+            LIMIT 10
+        `
+	} else {
+		q = fmt.Sprintf(`
+            SELECT user_id, sum(cnt) AS total
+            FROM stats.events
+            WHERE metric = '%s'
+            GROUP BY user_id
+            ORDER BY total DESC
+            LIMIT 10
+        `, metric)
+	}
+
+	rows, err := s.ck.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -128,12 +177,21 @@ func (s *StatsService) GetTopUsers(metric string) ([]TopItem, error) {
 
 	var out []TopItem
 	for rows.Next() {
-		var id string
-		var c uint64
-		if err := rows.Scan(&id, &c); err != nil {
-			return nil, err
+		if metric == "post-likes" {
+			var id string
+			var total int64
+			if err := rows.Scan(&id, &total); err != nil {
+				return nil, err
+			}
+			out = append(out, TopItem{ID: id, Count: total})
+		} else {
+			var id string
+			var total uint64
+			if err := rows.Scan(&id, &total); err != nil {
+				return nil, err
+			}
+			out = append(out, TopItem{ID: id, Count: int64(total)})
 		}
-		out = append(out, TopItem{ID: id, Count: c})
 	}
 	return out, nil
 }

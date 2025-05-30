@@ -7,17 +7,14 @@ import (
 	statspb "github.com/zahartd/social-network/src/grpc/go/stats"
 )
 
-// StatsHandler handles stats-related endpoints
 type StatsHandler struct {
 	client statspb.StatsServiceClient
 }
 
-// NewStatsHandler creates a new StatsHandler
 func NewStatsHandler(client statspb.StatsServiceClient) *StatsHandler {
 	return &StatsHandler{client: client}
 }
 
-// GetPostStats returns total views, likes, comments for a post
 func (h *StatsHandler) GetPostStats(c *gin.Context) {
 	postID := c.Param("postID")
 	req := &statspb.GetPostStatsRequest{PostId: postID}
@@ -26,10 +23,14 @@ func (h *StatsHandler) GetPostStats(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, res)
+
+	c.JSON(http.StatusOK, gin.H{
+		"views":    res.GetViews(),
+		"likes":    res.GetLikes(),
+		"comments": res.GetComments(),
+	})
 }
 
-// GetPostDynamics returns daily counts of a metric for a post
 func (h *StatsHandler) GetPostDynamics(c *gin.Context) {
 	postID := c.Param("postID")
 	metricStr := c.Query("metric")
@@ -52,10 +53,10 @@ func (h *StatsHandler) GetPostDynamics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, res)
 }
 
-// GetTopPosts returns top 10 posts by views, likes, or comments
 func (h *StatsHandler) GetTopPosts(c *gin.Context) {
 	byStr := c.Query("by")
 	var by statspb.GetTopRequest_By
@@ -77,7 +78,6 @@ func (h *StatsHandler) GetTopPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// GetTopUsers returns top 10 users by views, likes, or comments
 func (h *StatsHandler) GetTopUsers(c *gin.Context) {
 	byStr := c.Query("by")
 	var by statspb.GetTopRequest_By

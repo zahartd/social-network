@@ -21,14 +21,14 @@ func NewGRPCHandler(ck clickhouse.Conn) *GRPCHandler {
 }
 
 func (h *GRPCHandler) GetPostStats(ctx context.Context, req *statspb.GetPostStatsRequest) (*statspb.GetPostStatsResponse, error) {
-	views, likes, comments, err := h.svc.GetPostStats(req.GetPostId())
+	views, likes, comments, err := h.svc.GetPostStats(ctx, req.GetPostId())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%s", err.Error())
+		return nil, status.Errorf(codes.Internal, "GetPostStats: %v", err)
 	}
 	return &statspb.GetPostStatsResponse{
-		Views:    int64(views),
-		Likes:    int64(likes),
-		Comments: int64(comments),
+		Views:    views,
+		Likes:    likes,
+		Comments: comments,
 	}, nil
 }
 
@@ -42,10 +42,12 @@ func (h *GRPCHandler) GetPostDynamics(ctx context.Context, req *statspb.GetDynam
 	default:
 		metric = "post-views"
 	}
-	data, err := h.svc.GetDynamics(req.GetPostId(), metric)
+
+	data, err := h.svc.GetDynamics(ctx, req.GetPostId(), metric)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%s", err.Error())
+		return nil, status.Errorf(codes.Internal, "GetPostDynamics: %v", err)
 	}
+
 	resp := &statspb.GetDynamicsResponse{}
 	for _, d := range data {
 		resp.Data = append(resp.Data, &statspb.DayCount{
@@ -66,15 +68,17 @@ func (h *GRPCHandler) GetTopPosts(ctx context.Context, req *statspb.GetTopReques
 	default:
 		metric = "post-views"
 	}
-	items, err := h.svc.GetTopPosts(metric)
+
+	items, err := h.svc.GetTopPosts(ctx, metric)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%s", err.Error())
+		return nil, status.Errorf(codes.Internal, "GetTopPosts: %v", err)
 	}
+
 	resp := &statspb.TopPostsResponse{}
 	for _, it := range items {
 		resp.Items = append(resp.Items, &statspb.TopPost{
 			PostId: it.ID,
-			Count:  int64(it.Count),
+			Count:  it.Count,
 		})
 	}
 	return resp, nil
@@ -90,15 +94,17 @@ func (h *GRPCHandler) GetTopUsers(ctx context.Context, req *statspb.GetTopReques
 	default:
 		metric = "post-views"
 	}
-	items, err := h.svc.GetTopUsers(metric)
+
+	items, err := h.svc.GetTopUsers(ctx, metric)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%s", err.Error())
+		return nil, status.Errorf(codes.Internal, "GetTopUsers: %v", err)
 	}
+
 	resp := &statspb.TopUsersResponse{}
 	for _, it := range items {
 		resp.Items = append(resp.Items, &statspb.TopUser{
 			UserId: it.ID,
-			Count:  int64(it.Count),
+			Count:  it.Count,
 		})
 	}
 	return resp, nil

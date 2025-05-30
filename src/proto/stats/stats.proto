@@ -25,11 +25,10 @@ message GetDynamicsRequest {
   string post_id = 1;
   enum Metric { VIEWS = 0; LIKES = 1; COMMENTS = 2; }
   Metric metric = 2;
-  // опционально: date_from, date_to
 }
 
 message DayCount {
-  string date = 1;  // "YYYY-MM-DD"
+  string date = 1;
   int64 count = 2;
 }
 
@@ -53,7 +52,7 @@ message TopUser {
 }
 
 message TopPostsResponse {
-  repeated TopPost items = 1;  // top 10
+  repeated TopPost items = 1;
 }
 
 message TopUsersResponse {

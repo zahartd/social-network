@@ -25,11 +25,12 @@ type PostService struct {
 	repo          repository.PostRepository
 	viewWriter    *kafka.Writer
 	likeWriter    *kafka.Writer
+	unlikeWriter  *kafka.Writer
 	commentWriter *kafka.Writer
 }
 
-func NewPostService(r repository.PostRepository, vw, lw, cw *kafka.Writer) *PostService {
-	return &PostService{repo: r, viewWriter: vw, likeWriter: lw, commentWriter: cw}
+func NewPostService(r repository.PostRepository, vw, lw, uw, cw *kafka.Writer) *PostService {
+	return &PostService{repo: r, viewWriter: vw, likeWriter: lw, unlikeWriter: uw, commentWriter: cw}
 }
 
 func ToProtoPost(post *models.Post) *postpb.Post {
@@ -344,15 +345,13 @@ func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest)
 	}
 
 	ev := struct {
-		EventType string    `json:"event_type"`
-		UserID    string    `json:"user_id"`
-		PostId    string    `json:"post_id"`
-		Timestamp time.Time `json:"timestamp"`
+		UserID  string    `json:"user_id"`
+		PostId  string    `json:"post_id"`
+		LikedAt time.Time `json:"liked_at"`
 	}{
-		EventType: "LIKE",
-		UserID:    userID,
-		PostId:    req.PostId,
-		Timestamp: time.Now().UTC(),
+		UserID:  userID,
+		PostId:  req.PostId,
+		LikedAt: time.Now().UTC(),
 	}
 	payload, _ := json.Marshal(ev)
 
@@ -391,15 +390,13 @@ func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequ
 	}
 
 	ev := struct {
-		EventType string    `json:"event_type"`
 		UserID    string    `json:"user_id"`
 		PostId    string    `json:"post_id"`
-		Timestamp time.Time `json:"timestamp"`
+		UnlikedAt time.Time `json:"unliked_at"`
 	}{
-		EventType: "UNLIKE",
 		UserID:    userID,
 		PostId:    req.PostId,
-		Timestamp: time.Now().UTC(),
+		UnlikedAt: time.Now().UTC(),
 	}
 	payload, _ := json.Marshal(ev)
 
@@ -408,7 +405,7 @@ func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequ
 		writerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		err := s.likeWriter.WriteMessages(
+		err := s.unlikeWriter.WriteMessages(
 			writerCtx,
 			kafka.Message{
 				Key:   []byte(userID),

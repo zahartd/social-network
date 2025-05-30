@@ -54,6 +54,17 @@ func main() {
 			log.Fatal("failed to close writer:", err)
 		}
 	}()
+	unlikeWriter := &kafka.Writer{
+		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+		Topic:                  "post-unlikes",
+		Async:                  true,
+		AllowAutoTopicCreation: true,
+	}
+	defer func() {
+		if err := unlikeWriter.Close(); err != nil {
+			log.Fatal("failed to close writer:", err)
+		}
+	}()
 	commentWriter := &kafka.Writer{
 		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
 		Topic:                  "post-comments",
@@ -66,7 +77,7 @@ func main() {
 		}
 	}()
 
-	postService := service.NewPostService(postRepo, viewWriter, likeWriter, commentWriter)
+	postService := service.NewPostService(postRepo, viewWriter, likeWriter, unlikeWriter, commentWriter)
 	postHandler := handlers.NewPostGRPCHandler(postService)
 
 	grpcServer := grpc.NewServer(

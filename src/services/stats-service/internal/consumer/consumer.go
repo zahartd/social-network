@@ -14,10 +14,10 @@ import (
 type Event struct {
 	UserID      string    `json:"user_id"`
 	PostID      string    `json:"post_id"`
-	ViewedAt    time.Time `json:"viewed_at,omitempty"`
-	LikedAt     time.Time `json:"liked_at,omitempty"`
-	UnlikedAt   time.Time `json:"unliked_at,omitempty"`
-	CommentedAt time.Time `json:"created_at,omitempty"`
+	ViewedAt    time.Time `json:"viewed_at"`
+	LikedAt     time.Time `json:"liked_at"`
+	UnlikedAt   time.Time `json:"unliked_at"`
+	CommentedAt time.Time `json:"created_at"`
 }
 
 func RunAll(cfg *config.Config, ck clickhouse.Conn) {
@@ -50,7 +50,6 @@ func runConsumer(cfg *config.Config, ck clickhouse.Conn, topic string) {
 			continue
 		}
 
-		// pick the timestamp
 		var ts time.Time
 		switch topic {
 		case "post-views":
@@ -65,17 +64,16 @@ func runConsumer(cfg *config.Config, ck clickhouse.Conn, topic string) {
 			continue
 		}
 
-		// insert one raw event
 		const q = `
             INSERT INTO stats.events
                 (event_time, user_id, entity_id, metric, cnt)
             VALUES (?, ?, ?, ?, ?)`
 		if err := ck.Exec(ctx, q,
-			ts,        // event_time
-			ev.UserID, // user_id
-			ev.PostID, // entity_id
-			topic,     // metric
-			1,         // cnt
+			ts,
+			ev.UserID,
+			ev.PostID,
+			topic,
+			uint64(1),
 		); err != nil {
 			log.Printf("[Consumer %s] clickhouse insert error: %v", topic, err)
 		}

@@ -2,7 +2,9 @@ go 1.24.0
 
 use (
 	./gen/go
+	./grpc/go
 	./services/api-gateway
 	./services/post-service
+	./services/stats-service
 	./services/user-service
 )

@@ -1,4 +1,4 @@
-module github.com/zahartd/social-network/src/gen/go
+module github.com/zahartd/social-network/src/grpc/go
 
 go 1.24.0
 

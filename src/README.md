@@ -169,6 +169,37 @@ curl -X GET http://localhost:8080/posts/$POST_ID/comments/$PARENT_COMMENT_ID/rep
   -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
+# 1. Получить общую статистику (views, likes, comments) по посту
+curl -X GET http://localhost:8080/stats/posts/$POST_ID \
+  -H "Authorization: Bearer $JWT_TOKEN"
+
+# 2. Получить динамику просмотров (по дням) по посту
+curl -G http://localhost:8080/stats/posts/$POST_ID/dynamics \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  --data-urlencode "metric=views"
+
+# 3. Получить динамику лайков (по дням) по посту
+curl -G http://localhost:8080/stats/posts/$POST_ID/dynamics \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  --data-urlencode "metric=likes"
+
+# 4. Получить динамику комментариев (по дням) по посту
+curl -G http://localhost:8080/stats/posts/$POST_ID/dynamics \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  --data-urlencode "metric=comments"
+
+# 5. Получить топ-10 постов по выбранному критерию
+curl -G http://localhost:8080/stats/top/posts \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  --data-urlencode "by=views"
+# или by=likes, by=comments
+
+# 6. Получить топ-10 пользователей по выбранному критерию
+curl -G http://localhost:8080/stats/top/users \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  --data-urlencode "by=views"
+# или by=likes, by=comments
+
 ## Kafka events
 
 Enjoy the API and keep an eye on Kafka topics at http://localhost:8082
@@ -177,6 +208,7 @@ Enjoy the API and keep an eye on Kafka topics at http://localhost:8082
 
 ```bash
 protoc --proto_path=proto --go_out=gen/go --go_opt=paths=source_relative --go-grpc_out=gen/go --go-grpc_opt=paths=source_relative proto/post/post.proto
+protoc --proto_path=proto --go_out=grpc/go --go_opt=paths=source_relative --go-grpc_out=grpc/go --go-grpc_opt=paths=source_relative proto/stats/stats.proto
 docker compose down --rmi all --volumes --remove-orphans
 docker compose up --build
 docker compose up migrate

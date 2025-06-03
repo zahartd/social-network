@@ -25,11 +25,12 @@ type PostService struct {
 	repo          repository.PostRepository
 	viewWriter    *kafka.Writer
 	likeWriter    *kafka.Writer
+	unlikeWriter  *kafka.Writer
 	commentWriter *kafka.Writer
 }
 
-func NewPostService(r repository.PostRepository, vw, lw, cw *kafka.Writer) *PostService {
-	return &PostService{repo: r, viewWriter: vw, likeWriter: lw, commentWriter: cw}
+func NewPostService(r repository.PostRepository, vw, lw, uw, cw *kafka.Writer) *PostService {
+	return &PostService{repo: r, viewWriter: vw, likeWriter: lw, unlikeWriter: uw, commentWriter: cw}
 }
 
 func ToProtoPost(post *models.Post) *postpb.Post {
@@ -335,8 +336,13 @@ func (s *PostService) ViewPost(ctx context.Context, req *postpb.ViewPostRequest)
 }
 
 func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest) error {
-	userID, _ := auth.GetUserIDFromContext(ctx)
-	_ = s.repo.RecordLike(ctx, userID, req.PostId)
+	userID, err := auth.GetUserIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.RecordLike(ctx, userID, req.PostId); err != nil {
+		return err
+	}
 
 	ev := struct {
 		UserID  string    `json:"user_id"`
@@ -375,8 +381,47 @@ func (s *PostService) LikePost(ctx context.Context, req *postpb.LikePostRequest)
 }
 
 func (s *PostService) UnlikePost(ctx context.Context, req *postpb.UnlikePostRequest) error {
-	userID, _ := auth.GetUserIDFromContext(ctx)
-	_ = s.repo.RemoveLike(ctx, userID, req.PostId)
+	userID, err := auth.GetUserIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.RemoveLike(ctx, userID, req.PostId); err != nil {
+		return err
+	}
+
+	ev := struct {
+		UserID    string    `json:"user_id"`
+		PostId    string    `json:"post_id"`
+		UnlikedAt time.Time `json:"unliked_at"`
+	}{
+		UserID:    userID,
+		PostId:    req.PostId,
+		UnlikedAt: time.Now().UTC(),
+	}
+	payload, _ := json.Marshal(ev)
+
+	const retries = 3
+	for range retries {
+		writerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		err := s.unlikeWriter.WriteMessages(
+			writerCtx,
+			kafka.Message{
+				Key:   []byte(userID),
+				Value: payload,
+			},
+		)
+		if errors.Is(err, kafka.LeaderNotAvailable) || errors.Is(err, context.DeadlineExceeded) {
+			time.Sleep(time.Millisecond * 250)
+			continue
+		}
+
+		if err != nil {
+			log.Printf("failed to write messages: %s", err.Error())
+		}
+		break
+	}
 	return nil
 }
 

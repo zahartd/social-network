@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package stats;
+
+option go_package = "github.com/zahartd/social-network/src/grpc/go/stats";
+
+service StatsService {
+  rpc GetPostStats(GetPostStatsRequest) returns (GetPostStatsResponse);
+  rpc GetPostDynamics(GetDynamicsRequest) returns (GetDynamicsResponse);
+  rpc GetTopPosts(GetTopRequest) returns (TopPostsResponse);
+  rpc GetTopUsers(GetTopRequest) returns (TopUsersResponse);
+}
+
+message GetPostStatsRequest {
+  string post_id = 1;
+}
+
+message GetPostStatsResponse {
+  int64 views = 1;
+  int64 likes = 2;
+  int64 comments = 3;
+}
+
+message GetDynamicsRequest {
+  string post_id = 1;
+  enum Metric { VIEWS = 0; LIKES = 1; COMMENTS = 2; }
+  Metric metric = 2;
+}
+
+message DayCount {
+  string date = 1;
+  int64 count = 2;
+}
+
+message GetDynamicsResponse {
+  repeated DayCount data = 1;
+}
+
+message GetTopRequest {
+  enum By { VIEWS = 0; LIKES = 1; COMMENTS = 2; }
+  By by = 1;
+}
+
+message TopPost {
+  string post_id = 1;
+  int64 count = 2;
+}
+
+message TopUser {
+  string user_id = 1;
+  int64 count = 2;
+}
+
+message TopPostsResponse {
+  repeated TopPost items = 1;
+}
+
+message TopUsersResponse {
+  repeated TopUser items = 1;
+}

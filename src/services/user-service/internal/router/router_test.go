@@ -33,7 +33,7 @@ func newTestRouter() *gin.Engine {
 	ur := userRepository.NewInMemoryUserRepo()
 	sr := sessionRepository.NewInMemorySessionRepo()
 
-	auth.SetSessionRepo(sessionRepo)
+	auth.SetSessionRepo(sr)
 	userService := service.NewUserService(ur, sr, newDummyKafkaWriter())
 
 	auth.InitJWT()

@@ -12,8 +12,9 @@ import (
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/config"
-	"github.com/zahartd/social-network/src/services/user-service/internal/handlers"
-	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
+	sessionRepository "github.com/zahartd/social-network/src/services/user-service/internal/repository/session/postgres"
+	userRepository "github.com/zahartd/social-network/src/services/user-service/internal/repository/user/postgres"
+	"github.com/zahartd/social-network/src/services/user-service/internal/router"
 	"github.com/zahartd/social-network/src/services/user-service/internal/service"
 	"github.com/zahartd/social-network/src/services/user-service/internal/utils"
 )
@@ -65,8 +66,9 @@ func main() {
 	}
 	defer db.Close()
 
-	userRepo := repository.NewPostgresUserRepo(db)
-	sessionRepo := repository.NewPostgresSessionRepo(db)
+	userRepo := userRepository.NewPostgresUserRepo(db)
+	sessionRepo := sessionRepository.NewPostgresSessionRepo(db)
+
 	auth.SetSessionRepo(sessionRepo)
 	registrationsWriter := &kafka.Writer{
 		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
@@ -79,24 +81,13 @@ func main() {
 			log.Fatal("failed to close writer:", err)
 		}
 	}()
+
 	userService := service.NewUserService(userRepo, sessionRepo, registrationsWriter)
-	userHandler := handlers.NewUserHandler(userService)
 
 	auth.InitJWT()
-
-	router := gin.Default()
-
+	r := gin.Default()
 	initCustomValidators()
 
-	router.POST("/user", userHandler.CreateUser)
-	router.GET("/user/login", userHandler.Login)
-	router.GET("/user/logout", userHandler.Logout)
-
-	protected := router.Group("/user")
-	protected.Use(auth.JWTAuthMiddleware())
-	protected.GET("/:identifier", userHandler.GetUser)
-	protected.PUT("/:identifier", userHandler.UpdateUser)
-	protected.DELETE("/:identifier", userHandler.DeleteUser)
-
-	router.Run(":" + cfg.Port)
+	router.SetupRouter(r, userService)
+	r.Run(":" + cfg.Port)
 }

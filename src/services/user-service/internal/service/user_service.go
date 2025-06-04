@@ -15,7 +15,6 @@ import (
 
 	"github.com/zahartd/social-network/src/services/user-service/internal/auth"
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
-	"github.com/zahartd/social-network/src/services/user-service/internal/repository"
 )
 
 type UserService interface {
@@ -28,13 +27,27 @@ type UserService interface {
 	DeleteUser(ctx *gin.Context, id, token string) error
 }
 
+type SessionRepository interface {
+	CreateSession(session *models.Session) error
+	GetSessionByToken(token string) (*models.Session, error)
+	DeleteSessionByToken(token string) error
+}
+
+type UserRepository interface {
+	Create(user *models.User) error
+	GetByLogin(login string) (*models.User, error)
+	GetByID(id string) (*models.User, error)
+	Update(user *models.User) error
+	Delete(id string) error
+}
+
 type userService struct {
-	repo                repository.UserRepository
-	sessionRepo         repository.SessionRepository
+	repo                UserRepository
+	sessionRepo         SessionRepository
 	registrationsWriter *kafka.Writer
 }
 
-func NewUserService(repo repository.UserRepository, sessionRepo repository.SessionRepository, rw *kafka.Writer) UserService {
+func NewUserService(repo UserRepository, sessionRepo SessionRepository, rw *kafka.Writer) UserService {
 	return &userService{
 		repo:                repo,
 		sessionRepo:         sessionRepo,

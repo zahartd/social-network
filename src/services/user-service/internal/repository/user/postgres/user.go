@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"database/sql"
@@ -7,19 +7,11 @@ import (
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 )
 
-type UserRepository interface {
-	Create(user *models.User) error
-	GetByLogin(login string) (*models.User, error)
-	GetByID(id string) (*models.User, error)
-	Update(user *models.User) error
-	Delete(id string) error
-}
-
 type postgresUserRepo struct {
 	db *sql.DB
 }
 
-func NewPostgresUserRepo(db *sql.DB) UserRepository {
+func NewPostgresUserRepo(db *sql.DB) *postgresUserRepo {
 	return &postgresUserRepo{db: db}
 }
 

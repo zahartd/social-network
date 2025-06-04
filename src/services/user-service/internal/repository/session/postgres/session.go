@@ -8,17 +8,11 @@ import (
 	"github.com/zahartd/social-network/src/services/user-service/internal/models"
 )
 
-type SessionRepository interface {
-	CreateSession(session *models.Session) error
-	GetSessionByToken(token string) (*models.Session, error)
-	DeleteSessionByToken(token string) error
-}
-
 type postgresSessionRepo struct {
 	db *sql.DB
 }
 
-func NewPostgresSessionRepo(db *sql.DB) SessionRepository {
+func NewPostgresSessionRepo(db *sql.DB) *postgresSessionRepo {
 	return &postgresSessionRepo{db: db}
 }
 

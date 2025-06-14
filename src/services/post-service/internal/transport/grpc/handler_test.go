@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -134,6 +133,4 @@ func TestPostServiceRPCs(t *testing.T) {
 		_, err = c.DeletePost(authCtx(author), &postpb.DeletePostRequest{PostId: postID})
 		assert.NoError(t, err)
 	})
-
-	time.Sleep(5 * time.Millisecond)
 }

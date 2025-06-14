@@ -58,7 +58,6 @@ func ParseToken(tokenStr string) (jwt.MapClaims, error) {
 	return c, nil
 }
 
-// Bearer utilities.
 const bearer = "Bearer "
 
 func TrimBearer(s string) string {

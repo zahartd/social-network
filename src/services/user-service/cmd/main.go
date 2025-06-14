@@ -20,7 +20,6 @@ import (
 func main() {
 	cfg := config.MustLoad()
 
-	// --- infra setup ----------------------------------------------------
 	db, err := sql.Open("postgres", cfg.DB.DSN)
 	if err != nil {
 		log.Fatalf("db: %v", err)
@@ -33,13 +32,10 @@ func main() {
 	writer := kafka.NewUserWriter(cfg.Kafka.BrokerURL)
 	defer writer.Close()
 
-	// JWT (private/public key paths are taken from env inside Init)
 	auth.Init()
 
-	// --- services -------------------------------------------------------
 	userSvc := service.NewUser(userRepo, sessRepo, writer)
 
-	// --- HTTP -----------------------------------------------------------
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	app.RegisterValidators(r)

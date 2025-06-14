@@ -21,14 +21,13 @@ func New(broker string, repo repository.Stats) *Consumer {
 	var rs []*kafka.Reader
 	for _, t := range topics {
 		rs = append(rs, kafka.NewReader(kafka.ReaderConfig{
-			Brokers: []string{broker},
-			Topic:   t,
-			GroupID: "stats-service",
-			// ключевая строка: начинаем с самого раннего, если нет offset’а
+			Brokers:        []string{broker},
+			Topic:          t,
+			GroupID:        "stats-service",
 			StartOffset:    kafka.FirstOffset,
 			MinBytes:       1,
 			MaxBytes:       1 << 20,
-			CommitInterval: 0, // синхронный commit — быстрее тесты
+			CommitInterval: 0,
 		}))
 	}
 	return &Consumer{readers: rs, repo: repo}

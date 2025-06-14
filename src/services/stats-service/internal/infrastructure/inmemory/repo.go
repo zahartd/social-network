@@ -23,8 +23,6 @@ func (r *repo) Insert(_ context.Context, ev models.Event) error {
 	return nil
 }
 
-// ─────────────────── helpers ───────────────────
-
 func aggregate(events []models.Event, keyFn func(models.Event) string) map[string]int64 {
 	out := map[string]int64{}
 	for _, e := range events {
@@ -57,8 +55,6 @@ func topN(m map[string]int64, n int) []models.TopItem {
 	}
 	return list
 }
-
-// ─────────────────── repository ───────────────────
 
 func (r *repo) PostStats(_ context.Context, postID string) (int64, int64, int64, error) {
 	var views, likes, comments int64

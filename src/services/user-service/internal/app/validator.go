@@ -8,7 +8,6 @@ import (
 	"github.com/zahartd/social-network/src/services/user-service/internal/utils"
 )
 
-// RegisterValidators hooks custom funcs into gin‑validator once.
 func RegisterValidators(_ *gin.Engine) {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		_ = v.RegisterValidation("phone", func(fl validator.FieldLevel) bool {

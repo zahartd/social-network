@@ -35,8 +35,6 @@ func min(a, b int) int {
 	return b
 }
 
-/* ------------------- posts ------------------- */
-
 func (r *repo) Create(_ context.Context, p *models.Post) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -103,8 +101,6 @@ func (r *repo) Delete(_ context.Context, id, user string) error {
 	return nil
 }
 
-/* ------------------- feeds ------------------- */
-
 func (r *repo) UserFeed(_ context.Context, user string, page, size int) ([]models.Post, int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -147,13 +143,9 @@ func (r *repo) PublicFeed(_ context.Context, filter *string, page, size int) ([]
 	return out[start:end], total, nil
 }
 
-/* ------------------- metrics ------------------- */
-
 func (r *repo) RecordView(context.Context, string, string) error { return nil }
 func (r *repo) RecordLike(context.Context, string, string) error { return nil }
 func (r *repo) RemoveLike(context.Context, string, string) error { return nil }
-
-/* ------------------- comments & replies ------------------- */
 
 func (r *repo) CreateComment(_ context.Context, c *models.Comment) (string, error) {
 	r.mu.Lock()

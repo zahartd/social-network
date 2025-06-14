@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NewServer wraps gin.Engine into http.Server with graceful shutdown.
 func NewServer(engine *gin.Engine, port string) *http.Server {
 	srv := &http.Server{
 		Addr:              ":" + port,

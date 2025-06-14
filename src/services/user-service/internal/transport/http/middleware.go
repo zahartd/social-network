@@ -8,7 +8,6 @@ import (
 	"github.com/zahartd/social-network/src/services/user-service/internal/infrastructure/auth"
 )
 
-// AuthMiddleware attaches userID into context.
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tok := auth.TrimBearer(c.GetHeader("Authorization"))

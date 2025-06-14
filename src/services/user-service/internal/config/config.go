@@ -2,7 +2,6 @@ package config
 
 import "github.com/caarlos0/env/v10"
 
-// Config groups env vars.
 type Config struct {
 	HTTP struct {
 		Port string `env:"PORT" envDefault:"8081"`
@@ -15,7 +14,6 @@ type Config struct {
 	}
 }
 
-// MustLoad exits on failure.
 func MustLoad() *Config {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {

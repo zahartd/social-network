@@ -29,7 +29,6 @@ func (s *Service) GetTopUsers(ctx context.Context, metric string) ([]models.TopI
 	if err != nil {
 		return nil, err
 	}
-	// надёжная сортировка
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].Count == items[j].Count {
 			return items[i].ID < items[j].ID

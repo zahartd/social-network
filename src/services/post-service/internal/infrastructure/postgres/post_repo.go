@@ -15,8 +15,6 @@ type repo struct{ db *sqlx.DB }
 
 func New(db *sqlx.DB) repository.Post { return &repo{db: db} }
 
-/* ------------------- posts ------------------- */
-
 func (r *repo) Create(ctx context.Context, p *models.Post) (string, error) {
 	q := `INSERT INTO posts (user_id,title,description,is_private,tags)
 	      VALUES ($1,$2,$3,$4,$5) RETURNING id`
@@ -70,8 +68,6 @@ func (r *repo) Delete(ctx context.Context, id, uid string) error {
 	}
 	return nil
 }
-
-/* ------------------- helpers & feeds ------------------- */
 
 func (r *repo) AuthorID(ctx context.Context, postID string) (string, error) {
 	var uid string
@@ -130,8 +126,6 @@ func (r *repo) PublicFeed(ctx context.Context, filter *string, page, size int) (
 	return posts, total, nil
 }
 
-/* ------------------- metrics ------------------- */
-
 func (r *repo) RecordView(ctx context.Context, uid, pid string) error {
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO post_views(user_id,post_id) VALUES($1,$2)`, uid, pid)
@@ -149,8 +143,6 @@ func (r *repo) RemoveLike(ctx context.Context, uid, pid string) error {
 		`DELETE FROM post_likes WHERE user_id=$1 AND post_id=$2`, uid, pid)
 	return err
 }
-
-/* ------------------- comments & replies ------------------- */
 
 func (r *repo) CreateComment(ctx context.Context, c *models.Comment) (string, error) {
 	q := `INSERT INTO comments(post_id,user_id,text) VALUES($1,$2,$3) RETURNING id`

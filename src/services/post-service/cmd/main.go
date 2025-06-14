@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -13,94 +14,76 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	postpb "github.com/zahartd/social-network/src/gen/go/post"
-	"github.com/zahartd/social-network/src/services/post-service/internal/auth"
+	"github.com/zahartd/social-network/src/services/post-service/internal/app"
 	"github.com/zahartd/social-network/src/services/post-service/internal/config"
-	"github.com/zahartd/social-network/src/services/post-service/internal/handlers"
-	"github.com/zahartd/social-network/src/services/post-service/internal/repository"
-	"github.com/zahartd/social-network/src/services/post-service/internal/service"
 )
+
+type kafkaHub struct {
+	view, like, unlike, comment *kafka.Writer
+}
+
+func (h kafkaHub) Viewer() *kafka.Writer    { return h.view }
+func (h kafkaHub) Liker() *kafka.Writer     { return h.like }
+func (h kafkaHub) Unliker() *kafka.Writer   { return h.unlike }
+func (h kafkaHub) Commenter() *kafka.Writer { return h.comment }
 
 func main() {
 	cfg := config.Load()
 
 	db, err := sqlx.Connect("postgres", cfg.DB_DSN)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("db connect: %v", err)
 	}
 	defer db.Close()
 
-	postRepo := repository.NewPostgresPostRepository(db)
+	repo := app.BuildPostgresRepo(db)
 
-	viewWriter := &kafka.Writer{
-		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
-		Topic:                  "post-views",
-		Async:                  true,
-		AllowAutoTopicCreation: true,
-	}
-	defer func() {
-		if err := viewWriter.Close(); err != nil {
-			log.Fatal("failed to close writer:", err)
+	newWriter := func(topic string) *kafka.Writer {
+		return &kafka.Writer{
+			Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
+			Topic:                  topic,
+			Async:                  true,
+			AllowAutoTopicCreation: true,
 		}
-	}()
-	likeWriter := &kafka.Writer{
-		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
-		Topic:                  "post-likes",
-		Async:                  true,
-		AllowAutoTopicCreation: true,
 	}
-	defer func() {
-		if err := likeWriter.Close(); err != nil {
-			log.Fatal("failed to close writer:", err)
-		}
-	}()
-	unlikeWriter := &kafka.Writer{
-		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
-		Topic:                  "post-unlikes",
-		Async:                  true,
-		AllowAutoTopicCreation: true,
-	}
-	defer func() {
-		if err := unlikeWriter.Close(); err != nil {
-			log.Fatal("failed to close writer:", err)
-		}
-	}()
-	commentWriter := &kafka.Writer{
-		Addr:                   kafka.TCP(cfg.KafkaBrokerURL),
-		Topic:                  "post-comments",
-		Async:                  true,
-		AllowAutoTopicCreation: true,
-	}
-	defer func() {
-		if err := commentWriter.Close(); err != nil {
-			log.Fatal("failed to close writer:", err)
-		}
-	}()
 
-	postService := service.NewPostService(postRepo, viewWriter, likeWriter, unlikeWriter, commentWriter)
-	postHandler := handlers.NewPostGRPCHandler(postService)
+	hub := kafkaHub{
+		view:    newWriter("post-views"),
+		like:    newWriter("post-likes"),
+		unlike:  newWriter("post-unlikes"),
+		comment: newWriter("post-comments"),
+	}
 
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(auth.AuthInterceptor),
-	)
-
-	postpb.RegisterPostServiceServer(grpcServer, postHandler)
+	grpcServer := app.BuildServer(repo, hub)
 	reflection.Register(grpcServer)
 
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
-		log.Fatalf("Failed to listen on port %s: %v", cfg.GRPCPort, err)
+		log.Fatalf("listen %s: %v", cfg.GRPCPort, err)
 	}
 
 	go func() {
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve gRPC: %v", err)
+		if err := grpcServer.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			log.Fatalf("serve: %v", err)
 		}
 	}()
+	log.Printf("post-service gRPC started on :%s", cfg.GRPCPort)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
 
+	shutdownTimer := time.AfterFunc(10*time.Second, func() {
+		log.Println("forced exit")
+		os.Exit(0)
+	})
 	grpcServer.GracefulStop()
+	shutdownTimer.Stop()
+
+	_ = hub.view.Close()
+	_ = hub.like.Close()
+	_ = hub.unlike.Close()
+	_ = hub.comment.Close()
+
+	log.Println("post-service stopped gracefully")
 }

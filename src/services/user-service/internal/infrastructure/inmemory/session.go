@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/zahartd/social-network/src/services/user-service/internal/models"
+	"github.com/zahartd/social-network/src/services/user-service/internal/domain/models"
 )
 
 type InMemorySessionRepo struct {
@@ -18,17 +18,16 @@ func NewInMemorySessionRepo() *InMemorySessionRepo {
 	}
 }
 
-func (r *InMemorySessionRepo) CreateSession(sess *models.Session) error {
+func (r *InMemorySessionRepo) Create(sess *models.Session) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Просто кладём в map по ключу токена:
 	copySess := *sess
 	r.sessions[sess.Token] = &copySess
 	return nil
 }
 
-func (r *InMemorySessionRepo) GetSessionByToken(token string) (*models.Session, error) {
+func (r *InMemorySessionRepo) GetByToken(token string) (*models.Session, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -40,7 +39,7 @@ func (r *InMemorySessionRepo) GetSessionByToken(token string) (*models.Session, 
 	return &copySess, nil
 }
 
-func (r *InMemorySessionRepo) DeleteSessionByToken(token string) error {
+func (r *InMemorySessionRepo) DeleteByToken(token string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

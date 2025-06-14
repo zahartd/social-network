@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zahartd/social-network/src/services/user-service/internal/models"
+	"github.com/zahartd/social-network/src/services/user-service/internal/domain/models"
 )
 
 type InMemoryUserRepo struct {
@@ -25,15 +25,12 @@ func (r *InMemoryUserRepo) Create(user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Проверяем, что логин ещё свободен (доп. защита):
 	if _, exists := r.usersByLogin[user.Login]; exists {
 		return errors.New("user already exists")
 	}
 
-	// Предполагаем, что в сервисе user.ID уже выставлен (uuid.NewString()).
 	user.CreatedAt = time.Now().UTC()
 	user.UpdatedAt = time.Now().UTC()
-	// Копируем структуру, чтобы внешне никто не менял карту напрямую:
 	uCopy := *user
 	r.usersByID[user.ID] = &uCopy
 	r.usersByLogin[uCopy.Login] = &uCopy
@@ -48,7 +45,6 @@ func (r *InMemoryUserRepo) GetByLogin(login string) (*models.User, error) {
 	if !ok {
 		return nil, errors.New("user not found")
 	}
-	// Возвращаем копию, чтобы никто не модифицировал исходный объект:
 	uCopy := *u
 	return &uCopy, nil
 }
@@ -73,7 +69,6 @@ func (r *InMemoryUserRepo) Update(user *models.User) error {
 	if !ok {
 		return errors.New("user not found")
 	}
-	// Обновляем только поля, которые можем менять:
 	existing.Email = user.Email
 	existing.Firstname = user.Firstname
 	existing.Surname = user.Surname

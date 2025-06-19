@@ -3,39 +3,42 @@ package main
 import (
 	"log"
 	"net"
-
-	"github.com/zahartd/social-network/src/services/stats-service/internal/config"
-	"github.com/zahartd/social-network/src/services/stats-service/internal/consumer"
-	"github.com/zahartd/social-network/src/services/stats-service/internal/handlers"
-	"github.com/zahartd/social-network/src/services/stats-service/internal/storage"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	statspb "github.com/zahartd/social-network/src/grpc/go/stats"
+	"github.com/zahartd/social-network/src/services/stats-service/internal/app"
+	"github.com/zahartd/social-network/src/services/stats-service/internal/config"
 )
 
 func main() {
 	cfg := config.Load()
 
-	ck, err := storage.InitClickhouse(cfg)
-	if err != nil {
-		log.Fatalf("ClickHouse init failed: %v", err)
-	}
-
-	go consumer.RunAll(cfg, ck)
-
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf("listen: %v", err)
 	}
-	grpcServer := grpc.NewServer()
-	handler := handlers.NewGRPCHandler(ck)
-	statspb.RegisterStatsServiceServer(grpcServer, handler)
-	reflection.Register(grpcServer)
 
-	log.Printf("Stats-service listening on :%s", cfg.GRPCPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("gRPC serve error: %v", err)
+	srv, err := app.Build(cfg, lis)
+	if err != nil {
+		log.Fatalf("build server: %v", err)
 	}
+	reflection.Register(srv)
+
+	go func() {
+		if err := srv.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			log.Fatalf("serve: %v", err)
+		}
+	}()
+	log.Printf("stats-service started on :%s", cfg.GRPCPort)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+
+	srv.GracefulStop()
+	log.Println("stats-service stopped")
 }

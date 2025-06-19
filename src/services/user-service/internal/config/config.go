@@ -1,30 +1,23 @@
 package config
 
-import (
-	"log"
-	"os"
-)
+import "github.com/caarlos0/env/v10"
 
 type Config struct {
-	Port           string
-	DB_DSN         string
-	KafkaBrokerURL string
+	HTTP struct {
+		Port string `env:"PORT" envDefault:"8081"`
+	}
+	DB struct {
+		DSN string `env:"DB_DSN,required"`
+	}
+	Kafka struct {
+		BrokerURL string `env:"KAFKA_BROKER_URL"`
+	}
 }
 
-func Load() *Config {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8081"
+func MustLoad() *Config {
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		panic(err)
 	}
-
-	dbDSN := os.Getenv("DB_DSN")
-	if dbDSN == "" {
-		log.Fatal("DB_DSN environment variable is not set")
-	}
-
-	return &Config{
-		Port:           port,
-		DB_DSN:         dbDSN,
-		KafkaBrokerURL: os.Getenv("KAFKA_BROKER_URL"),
-	}
+	return &cfg
 }
